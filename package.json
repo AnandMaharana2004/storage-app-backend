@@ -18,7 +18,12 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "dev",
+    "dev": "node --watch --env-file=.env src/index.js",
+    "start": "node --env-file=.env src/index.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "test": "echo \"No tests yet\"",
     "prepare": "husky"
   },
   "dependencies": {
@@ -37,6 +42,9 @@
     "prettier": "3.7.4"
   },
   "lint-staged": {
-    "**/*": "prettier --write --ignore-unknown"
+    "*.{js,json,md}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }
