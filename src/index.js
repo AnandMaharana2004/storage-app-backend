@@ -1,10 +1,13 @@
 import express from "express";
-import process from "process";
 import { asyncHandler } from "./utils/AsyncHandler.js";
 import { ApiResponse } from "./utils/ApiResponse.js";
 import { globalErrorHandler } from "./middleware/globalErrorHandler.js";
+import { connectDb } from "./db/db.js";
+import envConfig from "./config/env.js";
 
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.get(
   "/health",
@@ -13,8 +16,15 @@ app.get(
   }),
 );
 
+//Db connection
+const db = await connectDb();
+app.use((req, res, next) => {
+  req.db = db;
+  next();
+});
+
 app.use(globalErrorHandler);
-const PORT = process.env.PORT;
+const PORT = envConfig.PORT;
 app.listen(PORT, () => {
   console.log(`Application listen on port : ${PORT}`);
 });

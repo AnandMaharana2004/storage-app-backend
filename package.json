@@ -27,7 +27,8 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "mongodb": "^7.0.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
