@@ -17,11 +17,11 @@ app.get(
 );
 
 //Db connection
-const db = await connectDb();
-app.use((req, res, next) => {
-  req.db = db;
-  next();
-});
+// const db = await connectDb();
+// app.use((req, res, next) => {
+//   req.db = db;
+//   next();
+// });
 
 app.use(globalErrorHandler);
 const PORT = envConfig.PORT;
