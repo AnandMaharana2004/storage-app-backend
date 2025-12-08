@@ -13,7 +13,7 @@ jobs:
       SSH_HOST: 3.7.200.152
       SSH_USER: ubuntu
       REMOTE_APP_DIR: /home/ubuntu/storage-app-backend
-      PM2_APP_NAME: storageApp-backend
+      PM2_APP_NAME: storageApp
 
     steps:
       - name: Setup SSH Key
