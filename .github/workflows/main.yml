@@ -1,0 +1,61 @@
+name: Backend Deployment to EC2
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: 3.7.200.152
+      SSH_USER: ubuntu
+      REMOTE_APP_DIR: /home/ubuntu/storage-app-backend
+      PM2_APP_NAME: storageApp-backend
+
+    steps:
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          echo "SSH key setup completed"
+
+      - name: Add Host to Known Hosts
+        run: |
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          echo "Host $SSH_HOST added to known_hosts"
+
+      - name: Test SSH Connection
+        run: |
+          ssh "${SSH_USER}@${SSH_HOST}" 'echo "SSH connection successful" && uname -a'
+
+      - name: Check if App Directory Exists
+        run: |
+          ssh "${SSH_USER}@${SSH_HOST}" "test -d $REMOTE_APP_DIR && echo 'Directory exists' || echo 'Directory does not exist'"
+
+      - name: Check if Git Repository
+        run: |
+          ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && git rev-parse --git-dir && echo 'Valid git repository' || echo 'Not a git repository'"
+
+      - name: Pull Latest Code
+        run: |
+          ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && git pull origin main && echo 'Git pull completed'"
+
+      - name: Install Dependencies
+        run: |
+          ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && npm ci --no-audit --no-fund && echo 'Dependencies installed'"
+
+      - name: Restart PM2 App
+        run: |
+          ssh "${SSH_USER}@${SSH_HOST}" "pm2 restart $PM2_APP_NAME && echo 'PM2 app restarted successfully'"
+
+      - name: Verify Deployment
+        run: |
+          ssh "${SSH_USER}@${SSH_HOST}" "pm2 status && echo 'Deployment verification completed'"
+
+      - name: Deployment Success
+        run: |
+          echo "Backend deployed successfully to EC2!"
