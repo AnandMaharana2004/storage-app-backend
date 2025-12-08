@@ -10,7 +10,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     env:
-      SSH_HOST: 13.203.102.90
+      SSH_HOST: 3.7.200.152
       SSH_USER: ubuntu
       REMOTE_APP_DIR: /home/ubuntu/storage-app-backend
       PM2_APP_NAME: storageApp-backend
