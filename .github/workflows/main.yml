@@ -10,7 +10,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     env:
-      SSH_HOST: 3.7.200.152
+      SSH_HOST: 13.203.102.90
       SSH_USER: ubuntu
       REMOTE_APP_DIR: /home/ubuntu/storage-app-backend
       PM2_APP_NAME: storageApp-backend
@@ -39,6 +39,10 @@ jobs:
       - name: Check if Git Repository
         run: |
           ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && git rev-parse --git-dir && echo 'Valid git repository' || echo 'Not a git repository'"
+
+      - name: Stash Local Changes
+        run: |
+          ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && git stash && echo 'Local changes stashed'"
 
       - name: Pull Latest Code
         run: |
