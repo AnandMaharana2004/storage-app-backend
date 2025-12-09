@@ -28,6 +28,7 @@
     "dbsetup": "node --env-file=.env src/db/setup.js"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "express": "^5.2.1",
     "mongoose": "^9.0.1"
   },
