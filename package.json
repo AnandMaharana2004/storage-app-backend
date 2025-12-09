@@ -24,11 +24,12 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "test": "echo \"No tests yet\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "dbsetup": "node --env-file=.env src/db/setup.js"
   },
   "dependencies": {
     "express": "^5.2.1",
-    "mongodb": "^7.0.0"
+    "mongoose": "^9.0.1"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",

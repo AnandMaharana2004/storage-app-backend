@@ -2,7 +2,7 @@ import express from "express";
 import { asyncHandler } from "./utils/AsyncHandler.js";
 import { ApiResponse } from "./utils/ApiResponse.js";
 import { globalErrorHandler } from "./middleware/globalErrorHandler.js";
-import { connectDb } from "./db/db.js";
+import { connectDB } from "./db/connection.js";
 import envConfig from "./config/env.js";
 
 const app = express();
@@ -16,12 +16,8 @@ app.get(
   }),
 );
 
-//Db connection
-// const db = await connectDb();
-// app.use((req, res, next) => {
-//   req.db = db;
-//   next();
-// });
+// Db connection
+await connectDB();
 
 app.use(globalErrorHandler);
 const PORT = envConfig.PORT;
