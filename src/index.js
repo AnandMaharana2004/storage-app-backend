@@ -4,6 +4,7 @@ import { ApiResponse } from "./utils/ApiResponse.js";
 import { globalErrorHandler } from "./middleware/globalErrorHandler.js";
 import { connectDB } from "./db/connection.js";
 import envConfig from "./config/env.js";
+import authRouter from "./routes/auth.route.js";
 
 const app = express();
 app.use(express.json());
@@ -18,6 +19,8 @@ app.get(
 
 // Db connection
 await connectDB();
+
+app.use("/auth", authRouter);
 
 app.use(globalErrorHandler);
 const PORT = envConfig.PORT;
