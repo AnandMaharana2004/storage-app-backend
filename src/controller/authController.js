@@ -1,10 +1,16 @@
 import OTP from "../models/otpModel.js";
 import Session from "../models/sessionModel.js";
 import User from "../models/userModel.js";
+import { sendOtpMail } from "../service/emailService.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
-import { loginSchema, registerSchema } from "../validators/authSchema.js";
+import { createOTP } from "../utils/OtherUtils.js";
+import {
+  loginSchema,
+  registerSchema,
+  otpSchema,
+} from "../validators/authSchema.js";
 
 export const Login = asyncHandler(async (req, res) => {
   const { success, data } = loginSchema.safeParse(req.body);
@@ -97,9 +103,40 @@ export const ForgotPassword = asyncHandler(async (req, res) => {
 });
 
 export const GenerateOTP = asyncHandler(async (req, res) => {
+  const { success, data } = otpSchema.safeParse(req.body);
+
+  if (!success || !data)
+    throw new ApiError(400, "Missing required field: email");
+
+  const { email } = data;
+
+  const existOTPRecord = await OTP.findOne({ email });
+
+  if (!existOTPRecord) {
+    const otp = createOTP(4);
+    const newOTPRecord = await OTP.create({
+      email,
+      otp,
+    });
+    await sendOtpMail(newOTPRecord.email, newOTPRecord.otp);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, newOTPRecord.email, "OTP generate successfully"),
+      );
+  }
+
+  const otp = createOTP(4);
+  existOTPRecord.otp = otp;
+  await existOTPRecord.save();
+
+  await sendOtpMail(existOTPRecord.email, existOTPRecord.otp);
+
   return res
     .status(200)
-    .json(new ApiResponse(200, null, "Generate Opt Under Construction"));
+    .json(
+      new ApiResponse(200, existOTPRecord.email, "OTP generate successfully"),
+    );
 });
 
 export const VerifyForgotPasswordURL = asyncHandler(async (req, res) => {
