@@ -7,9 +7,9 @@ export const loginSchema = z.object({
 
 export const otpSchema = z.object({
   email: z.email("Please enter a valid email"),
-  otp: z
-    .string("Please enter a valid 4 digit OTP string")
-    .regex(/^\d{4}$/, "Please enter a valid 4 digit OTP"),
+  // otp: z
+  //   .string("Please enter a valid 4 digit OTP string")
+  //   .regex(/^\d{4}$/, "Please enter a valid 4 digit OTP"),
 });
 
 export const registerSchema = loginSchema.extend({
