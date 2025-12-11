@@ -5,10 +5,12 @@ import { globalErrorHandler } from "./middleware/globalErrorHandler.js";
 import { connectDB } from "./db/connection.js";
 import envConfig from "./config/env.js";
 import authRouter from "./routes/auth.route.js";
+import cookieParser from "cookie-parser";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser(envConfig.COOKIE_SECRET));
 
 app.get(
   "/health",

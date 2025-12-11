@@ -6,16 +6,16 @@ const sessionSchema = new Schema(
       type: Schema.Types.ObjectId,
       required: true,
     },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-      expires: 3600,
-    },
   },
   {
     strict: "throw",
+    timestamps: true,
   },
 );
+
+sessionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 7 });
+
+sessionSchema.index({ userId: 1, createdAt: -1 });
 
 const Session = model("Session", sessionSchema);
 

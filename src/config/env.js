@@ -11,6 +11,7 @@ const envConfig = {
   PORT: process.env.PORT,
   NODE_ENV: process.env.NODE_ENV,
   CORS_ORIGIN: process.env.CORS_ORIGIN || "*",
+  COOKIE_SECRET: process.env.COOKIE_SECRET,
 };
 
 if (isNaN(envConfig.PORT)) {

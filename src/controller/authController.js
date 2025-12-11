@@ -13,6 +13,7 @@ import {
   otpSchema,
 } from "../validators/authSchema.js";
 import Directory from "../models/directoryModel.js";
+import envConfig from "../config/env.js";
 
 export const Login = asyncHandler(async (req, res) => {
   const { success, data } = loginSchema.safeParse(req.body);
@@ -24,35 +25,44 @@ export const Login = asyncHandler(async (req, res) => {
   if (!existUser) throw new ApiError(400, "Invalid Credentials");
 
   const isPasswordValid = await existUser.comparePassword(password);
-
   if (!isPasswordValid) throw new ApiError(400, "Invalid Credentials");
 
-  // session check and delete if it > 2 delete first one
+  // ✅ Limit to 2 sessions per user
+  const existingSessions = await Session.find({ userId: existUser._id })
+    .sort({ createdAt: 1 }) // Oldest first
+    .select("_id");
 
-  const existSession = await Session.find({ _id: existUser._id });
-
-  if (existSession.length > 2) {
-    // we need to delete the first one
+  if (existingSessions.length >= 2) {
+    // Delete oldest session
+    await Session.deleteOne({ _id: existingSessions[0]._id });
   }
 
-  // create new session
+  // ✅ Create new session (simple!)
   const newSession = await Session.create({
     userId: existUser._id,
   });
 
-  const sessionExpiryTime = 60 * 1000 * 60 * 24 * 7;
+  const sessionExpiryTime = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-  res.cookie("sid", newSession._id, {
+  res.cookie("sid", newSession._id.toString(), {
     httpOnly: true,
     signed: true,
-    sameSite: "none",
-    secure: true,
+    sameSite: envConfig.NODE_ENV === "production" ? "none" : "lax",
+    secure: envConfig.NODE_ENV === "production",
     maxAge: sessionExpiryTime,
   });
 
+  const userData = {
+    _id: existUser._id,
+    name: existUser.name,
+    email: existUser.email,
+    picture: existUser.picture,
+    role: existUser.role,
+  };
+
   return res
     .status(200)
-    .json(new ApiResponse(200, existUser.email, "User Login Successfully"));
+    .json(new ApiResponse(200, userData, "User Login Successfully"));
 });
 
 export const Register = asyncHandler(async (req, res) => {
