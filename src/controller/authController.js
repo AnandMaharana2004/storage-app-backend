@@ -11,6 +11,7 @@ import {
   loginSchema,
   registerSchema,
   otpSchema,
+  logoutSchema,
 } from "../validators/authSchema.js";
 import Directory from "../models/directoryModel.js";
 import envConfig from "../config/env.js";
@@ -140,9 +141,28 @@ export const Register = asyncHandler(async (req, res) => {
 });
 
 export const Logout = asyncHandler(async (req, res) => {
+  const { success, data, error } = logoutSchema.safeParse(req.body);
+  if (!success) {
+    throw new ApiError(400, error.message);
+  }
+
+  if (data.all) {
+    // delete from all device
+    await Session.deleteMany({ userId: req.user._id });
+  } else {
+    await Session.findByIdAndDelete(req.sessionId);
+  }
+
+  res.cookie("sid", "");
   return res
     .status(200)
-    .json(new ApiResponse(200, null, "Logout Under Construction"));
+    .json(
+      new ApiResponse(
+        200,
+        null,
+        data.all ? "User Logout from all device" : "User Logout Successfully",
+      ),
+    );
 });
 
 export const ChangePassword = asyncHandler(async (req, res) => {

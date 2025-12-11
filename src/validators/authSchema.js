@@ -21,3 +21,7 @@ export const registerSchema = loginSchema.extend({
     .string("Please enter a valid 4 digit OTP string")
     .regex(/^\d{4}$/, "Please enter a valid 4 digit OTP"),
 });
+
+export const logoutSchema = z.object({
+  all: z.boolean("missing field: all").optional().default(false),
+});

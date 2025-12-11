@@ -8,6 +8,7 @@ import {
   Register,
   VerifyForgotPasswordURL,
 } from "../controller/authController.js";
+import { authenticate } from "../middleware/authMiddleware.js";
 
 const router = Router();
 
@@ -16,7 +17,7 @@ router.post("/register", Register);
 router.post("/forgot-password", ForgotPassword);
 router.post("/change-password", ChangePassword);
 router.get("/verify-forgot-link:id", VerifyForgotPasswordURL);
-router.post("/logout", Logout);
+router.post("/logout", authenticate, Logout);
 router.post("/send-otp", GenerateOTP);
 
 export default router;
