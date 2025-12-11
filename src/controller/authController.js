@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import OTP from "../models/otpModel.js";
 import Session from "../models/sessionModel.js";
 import User from "../models/userModel.js";
@@ -11,6 +12,7 @@ import {
   registerSchema,
   otpSchema,
 } from "../validators/authSchema.js";
+import Directory from "../models/directoryModel.js";
 
 export const Login = asyncHandler(async (req, res) => {
   const { success, data } = loginSchema.safeParse(req.body);
@@ -65,23 +67,66 @@ export const Register = asyncHandler(async (req, res) => {
     throw new ApiError(409, "User with this email already exists");
   }
 
-  const otpRecord = await OTP.findOne(email, otp);
+  // Verify OTP
+  const otpRecord = await OTP.findOne({ email, otp });
+  if (!otpRecord) throw new ApiError(400, "Invalid or Expired OTP!");
 
-  if (!otpRecord) throw new ApiError(400, "Invalid Invalid or Expired OTP!");
+  const session = await mongoose.startSession();
+  let newUser;
 
-  const newUser = await User.create({
-    name,
-    email,
-    password, // Ensure your User model pre-save hook handles hashing
-  });
+  try {
+    await session.withTransaction(async () => {
+      const rootDirId = new mongoose.Types.ObjectId();
+      const userId = new mongoose.Types.ObjectId();
 
-  await OTP.deleteOne({
-    _id: otpRecord._id,
-  });
+      // Create user (password should be hashed by pre-save middleware)
+      const createdUsers = await User.create(
+        [
+          {
+            _id: userId,
+            name,
+            email,
+            password,
+            rootDirId,
+          },
+        ],
+        { session },
+      );
 
-  return res
-    .status(201)
-    .json(new ApiResponse(201, newUser.email, "User Registered Successfully"));
+      newUser = createdUsers[0];
+
+      // Create root directory
+      await Directory.create(
+        [
+          {
+            _id: rootDirId,
+            userId: newUser._id,
+            name: `root-${email}`,
+            parentDirId: null, // Explicitly set null
+          },
+        ],
+        { session },
+      );
+    });
+
+    // Delete OTP after successful transaction
+    await OTP.deleteOne({ _id: otpRecord._id });
+
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
+          { email: newUser.email },
+          "User Registered Successfully",
+        ),
+      );
+  } catch (error) {
+    console.log(error);
+    throw error;
+  } finally {
+    await session.endSession();
+  }
 });
 
 export const Logout = asyncHandler(async (req, res) => {
