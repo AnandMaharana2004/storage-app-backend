@@ -12,6 +12,7 @@ const envConfig = {
   NODE_ENV: process.env.NODE_ENV,
   CORS_ORIGIN: process.env.CORS_ORIGIN || "*",
   COOKIE_SECRET: process.env.COOKIE_SECRET,
+  FRONTEND_URL: process.env.FRONTEND_URL,
 };
 
 if (isNaN(envConfig.PORT)) {

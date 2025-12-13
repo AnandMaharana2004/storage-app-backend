@@ -6,11 +6,18 @@ import { connectDB } from "./db/connection.js";
 import envConfig from "./config/env.js";
 import authRouter from "./routes/auth.route.js";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(envConfig.COOKIE_SECRET));
+app.use(
+  cors({
+    origin: ["http://localhost:5173", envConfig.FRONTEND_URL],
+    credentials: true,
+  }),
+);
 
 app.get(
   "/health",
