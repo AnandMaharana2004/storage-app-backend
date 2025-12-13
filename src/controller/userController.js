@@ -1,10 +1,12 @@
-import Session from "../models/sessionModel";
-import User from "../models/userModel";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import { asyncHandler } from "../utils/AsyncHandler";
-import { deleteUserSchema } from "../validators/authSchema";
-import { DeleteUserSessionsSchema } from "../validators/userSchema";
+import Session from "../models/sessionModel.js";
+import User from "../models/userModel.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/AsyncHandler.js";
+import {
+  DeleteUserSessionsSchema,
+  deleteUserSchema,
+} from "../validators/userSchema.js";
 
 export const AllUsers = asyncHandler(async (req, res) => {
   // Implement pagination

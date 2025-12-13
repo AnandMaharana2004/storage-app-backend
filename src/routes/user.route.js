@@ -5,8 +5,8 @@ import {
   DeleteUserSessions,
   getCurrentUser,
   SearchUserByNameOrEmail,
-} from "../controller/userController";
-import { authenticate, isAdmin } from "../middleware/authMiddleware";
+} from "../controller/userController.js";
+import { authenticate, isAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
