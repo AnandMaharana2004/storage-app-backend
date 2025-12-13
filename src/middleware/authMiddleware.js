@@ -28,3 +28,8 @@ export const authenticate = asyncHandler(async (req, res, next) => {
 
   next();
 });
+
+export const isAdmin = (req, res, next) => {
+  if (req.user.role === "Admin") return next();
+  res.status(403).json({ error: "You can not delete users" });
+};
