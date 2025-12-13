@@ -2,7 +2,10 @@ import mongoose from "mongoose";
 import OTP from "../models/otpModel.js";
 import Session from "../models/sessionModel.js";
 import User from "../models/userModel.js";
-import { sendOtpMail } from "../service/emailService.js";
+import {
+  sendForgotPasswordMail,
+  sendOtpMail,
+} from "../service/emailService.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
@@ -12,9 +15,12 @@ import {
   registerSchema,
   otpSchema,
   logoutSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from "../validators/authSchema.js";
 import Directory from "../models/directoryModel.js";
 import envConfig from "../config/env.js";
+import ForgotPasswordToken from "../models/forgotPasswordTokenModel.js";
 
 export const Login = asyncHandler(async (req, res) => {
   const { success, data } = loginSchema.safeParse(req.body);
@@ -172,9 +178,59 @@ export const ChangePassword = asyncHandler(async (req, res) => {
 });
 
 export const ForgotPassword = asyncHandler(async (req, res) => {
+  const { success, error, data } = forgotPasswordSchema.safeParse(req.body);
+  console.log(req.body);
+  if (!success || !data) throw new ApiError(400, error.message);
+
+  const { email } = data;
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          null,
+          "If this email exists, a reset link has been sent",
+        ),
+      );
+  }
+
+  await ForgotPasswordToken.deleteMany({
+    userId: user._id,
+    isUsed: false,
+  });
+
+  const resetToken = crypto.randomBytes(32).toString("hex");
+
+  const tokenHash = ForgotPasswordToken.hashToken(resetToken);
+
+  const expiresAt = new Date(Date.now() + 60 * 60 * 250); // 1 hour
+
+  await ForgotPasswordToken.create({
+    userId: user._id,
+    email: user.email,
+    tokenHash,
+    expiresAt,
+  });
+
+  const resetUrl = `${envConfig.FRONTEND_URL}/reset-password/${resetToken}`;
+
+  // Or for testing locally:
+  // const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+
+  await sendForgotPasswordMail(user.email, resetUrl, user.name);
+
   return res
     .status(200)
-    .json(new ApiResponse(200, null, "Forgot pasasword Under Construction"));
+    .json(
+      new ApiResponse(
+        200,
+        null,
+        "Password reset link has been sent to your email",
+      ),
+    );
 });
 
 export const GenerateOTP = asyncHandler(async (req, res) => {
@@ -214,10 +270,61 @@ export const GenerateOTP = asyncHandler(async (req, res) => {
     );
 });
 
-export const VerifyForgotPasswordURL = asyncHandler(async (req, res) => {
+export const ResetPassword = asyncHandler(async (req, res) => {
+  const { token } = req.params; // Get token from URL
+  const { success, error, data } = resetPasswordSchema.safeParse(req.body);
+
+  if (!success || !data) throw new ApiError(400, error.message);
+
+  const { password } = data;
+
+  const tokenHash = ForgotPasswordToken.hashToken(token);
+
+  const tokenRecord = await ForgotPasswordToken.findOne({
+    tokenHash,
+    isUsed: false,
+    expiresAt: { $gt: new Date() }, // Not expired
+  });
+
+  if (!tokenRecord) {
+    throw new ApiError(400, "Invalid or expired reset token");
+  }
+
+  const user = await User.findById(tokenRecord.userId);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const session = await mongoose.startSession();
+
+  try {
+    await session.withTransaction(async () => {
+      await User.updateOne(
+        { _id: user._id },
+        { password: password },
+        { session },
+      );
+
+      // Mark token as used
+      await ForgotPasswordToken.updateOne(
+        { _id: tokenRecord._id },
+        { isUsed: true },
+        { session },
+      );
+
+      await Session.deleteMany({ userId: user._id }, { session });
+    });
+  } finally {
+    await session.endSession();
+  }
+
   return res
     .status(200)
     .json(
-      new ApiResponse(200, null, "Verify Forgot Password URL Under Process"),
+      new ApiResponse(
+        200,
+        null,
+        "Password reset successful. Please login with your new password.",
+      ),
     );
 });
