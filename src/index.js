@@ -8,6 +8,9 @@ import authRouter from "./routes/auth.route.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
+import userRouter from "./routes/user.route.js";
+import directoryRouter from "./routes/directory.route.js";
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -30,6 +33,8 @@ app.get(
 await connectDB();
 
 app.use("/auth", authRouter);
+app.use("/user", userRouter);
+app.use("/directory", directoryRouter);
 
 app.use(globalErrorHandler);
 const PORT = envConfig.PORT;
