@@ -28,6 +28,7 @@
     "dbsetup": "node --env-file=.env src/db/setup.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.948.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
