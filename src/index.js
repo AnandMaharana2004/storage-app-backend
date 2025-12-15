@@ -33,7 +33,7 @@ app.get(
 await connectDB();
 
 app.use("/auth", authRouter);
-app.use("/user", userRouter);
+app.use("/users", userRouter);
 app.use("/directory", directoryRouter);
 
 app.use(globalErrorHandler);
