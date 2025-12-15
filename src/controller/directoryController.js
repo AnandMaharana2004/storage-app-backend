@@ -83,7 +83,7 @@ export const CreateDirectory = asyncHandler(async (req, res) => {
 
   res
     .status(201)
-    .json(new ApiResponse(201, "Directory created successfully", directory));
+    .json(new ApiResponse(201, directory, "Directory created successfully"));
 });
 
 export const UpdateDirectoryName = asyncHandler(async (req, res) => {
@@ -134,7 +134,7 @@ export const UpdateDirectoryName = asyncHandler(async (req, res) => {
   res
     .status(200)
     .json(
-      new ApiResponse(200, "Directory name updated successfully", directory),
+      new ApiResponse(200, directory, "Directory name updated successfully"),
     );
 });
 
@@ -214,7 +214,7 @@ export const GetDirectory = asyncHandler(async (req, res) => {
 
   res
     .status(200)
-    .json(new ApiResponse(200, "Directory retrieved successfully", response));
+    .json(new ApiResponse(200, response, "Directory retrieved successfully"));
 });
 
 export const DeleteDirectory = asyncHandler(async (req, res) => {
@@ -255,9 +255,13 @@ export const DeleteDirectory = asyncHandler(async (req, res) => {
   }
 
   res.status(200).json(
-    new ApiResponse(200, "Directory deleted successfully", {
-      deletedDirectoryId: directoryId,
-    }),
+    new ApiResponse(
+      200,
+      {
+        deletedDirectoryId: directoryId,
+      },
+      "Directory deleted successfully",
+    ),
   );
 });
 
@@ -349,5 +353,5 @@ export const MoveDirectory = asyncHandler(async (req, res) => {
 
   res
     .status(200)
-    .json(new ApiResponse(200, "Directory moved successfully", directory));
+    .json(new ApiResponse(200, directory, "Directory moved successfully"));
 });
