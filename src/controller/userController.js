@@ -26,17 +26,21 @@ export const AllUsers = asyncHandler(async (req, res) => {
   const totalPages = Math.ceil(totalUsers / limit);
 
   res.status(200).json(
-    new ApiResponse(200, "Users found successfully", {
-      users,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalUsers,
-        limit,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
+    new ApiResponse(
+      200,
+      {
+        users,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalUsers,
+          limit,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
+        },
       },
-    }),
+      "Users found successfully",
+    ),
   );
 });
 
@@ -49,7 +53,7 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
 
   res
     .status(200)
-    .json(new ApiResponse(200, "Current user retrieved successfully", user));
+    .json(new ApiResponse(200, user, "Current user retrieved successfully"));
 });
 
 export const SearchUserByNameOrEmail = asyncHandler(async (req, res) => {
@@ -84,18 +88,22 @@ export const SearchUserByNameOrEmail = asyncHandler(async (req, res) => {
   const totalPages = Math.ceil(totalUsers / limit);
 
   res.status(200).json(
-    new ApiResponse(200, "Users search completed successfully", {
-      users,
-      searchQuery,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalUsers,
-        limit,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
+    new ApiResponse(
+      200,
+      {
+        users,
+        searchQuery,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalUsers,
+          limit,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
+        },
       },
-    }),
+      "Users search completed successfully",
+    ),
   );
 });
 
@@ -127,17 +135,14 @@ export const DeleteUser = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User does not exist");
   }
 
-  res.status(200).json(new ApiResponse(200, "User deleted successfully", user));
+  res.status(200).json(new ApiResponse(200, user, "User deleted successfully"));
 });
 
 export const DeleteUserSessions = asyncHandler(async (req, res) => {
   const { success, data, error } = DeleteUserSessionsSchema.safeParse(req.body);
 
   if (!success || !data) {
-    throw new ApiError(
-      400,
-      error?.errors[0]?.message || "Please provide a valid user ID",
-    );
+    throw new ApiError(400, error.message || "Please provide a valid user ID");
   }
 
   const { userId } = data;
@@ -157,9 +162,13 @@ export const DeleteUserSessions = asyncHandler(async (req, res) => {
   const result = await Session.deleteMany({ userId });
 
   res.status(200).json(
-    new ApiResponse("User sessions deleted successfully", {
-      deletedCount: result.deletedCount,
-      userId,
-    }),
+    new ApiResponse(
+      200,
+      {
+        deletedCount: result.deletedCount,
+        userId,
+      },
+      "User sessions deleted successfully",
+    ),
   );
 });
