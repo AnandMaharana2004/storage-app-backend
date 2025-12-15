@@ -7,7 +7,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client } from "../config/aws.config.js";
 import envConfig from "../config/env.js";
 
-export const generatePreSignUrl = ({
+export const generatePreSignUrl = async ({
   bucketName = envConfig.AWS_BUCKET_NAME,
   key,
   contentType,
@@ -16,11 +16,10 @@ export const generatePreSignUrl = ({
   const command = new PutObjectCommand({
     Bucket: bucketName,
     Key: key,
-    ContentType: contentType,
+    ContentType: contentType, // optional but OK
   });
 
-  const url = getSignedUrl(s3Client, command, expiresIn);
-  return url;
+  return await getSignedUrl(s3Client, command, { expiresIn });
 };
 
 // this is helpfull for direct upload from server
