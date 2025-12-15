@@ -10,6 +10,7 @@ import cors from "cors";
 
 import userRouter from "./routes/user.route.js";
 import directoryRouter from "./routes/directory.route.js";
+import fileRouter from "./routes/file.route.js";
 
 const app = express();
 app.use(express.json());
@@ -35,6 +36,7 @@ await connectDB();
 app.use("/auth", authRouter);
 app.use("/users", userRouter);
 app.use("/directory", directoryRouter);
+app.use("/fiels", fileRouter);
 
 app.use(globalErrorHandler);
 const PORT = envConfig.PORT;
