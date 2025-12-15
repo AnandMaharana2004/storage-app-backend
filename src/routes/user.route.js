@@ -1,31 +1,22 @@
 import express from "express";
 import {
-  RequestUploadUrl,
-  CompleteUpload,
-  GetFile,
-  RenameFile,
-  DeleteFile,
-  ShareFile,
-  GetPublicFile,
-  MoveFile,
-  GetFilesInDirectory,
-} from "../controller/fileController.js";
-import { authenticate } from "../middleware/authMiddleware.js";
+  AllUsers,
+  DeleteUser,
+  DeleteUserSessions,
+  getCurrentUser,
+  SearchUserByNameOrEmail,
+} from "../controller/userController.js";
+import { authenticate, isAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// public route
-router.get("/shared/:fileId", GetPublicFile);
-
-// private routes
+// All routes require authentication
 router.use(authenticate);
-router.post("/upload/request", RequestUploadUrl);
-router.post("/upload/complete", CompleteUpload);
-router.get("/:fileId", GetFile);
-router.get("/directory/:directoryId", GetFilesInDirectory);
-router.patch("/rename", RenameFile);
-router.patch("/move", MoveFile);
-router.post("/share", ShareFile);
-router.delete("/delete", DeleteFile);
+
+router.get("/all", AllUsers); // GET /api/users/all?page=1&limit=10
+router.get("/me", getCurrentUser);
+router.get("/search", SearchUserByNameOrEmail); // GET /api/users/search?search=john&page=1&limit=10
+router.delete("/delete", isAdmin, DeleteUser);
+router.delete("/sessions", DeleteUserSessions);
 
 export default router;
