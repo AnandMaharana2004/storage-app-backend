@@ -36,7 +36,7 @@ await connectDB();
 app.use("/auth", authRouter);
 app.use("/users", userRouter);
 app.use("/directory", directoryRouter);
-app.use("/fiels", fileRouter);
+app.use("/files", fileRouter);
 
 app.use(globalErrorHandler);
 const PORT = envConfig.PORT;
