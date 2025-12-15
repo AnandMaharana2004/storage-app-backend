@@ -9,11 +9,11 @@ import {
   generatePreSignUrl,
   deleteObject,
   headObject,
-} from "../services/s3Service.js";
+} from "../service/s3Service.js";
 import {
   generateSignedUrl,
   invalidateCloudFront,
-} from "../services/cloudfrontService.js";
+} from "../service/cloudfrontService.js";
 import envConfig from "../config/env.js";
 import {
   requestUploadSchema,
@@ -24,7 +24,7 @@ import {
   shareFileSchema,
   moveFileSchema,
   getFilesInDirectorySchema,
-} from "../validations/fileValidation.js";
+} from "../validators/fileSchema.js";
 
 function getMimeType(extension) {
   const mimeTypes = {
