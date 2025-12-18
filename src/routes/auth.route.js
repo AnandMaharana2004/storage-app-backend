@@ -4,6 +4,7 @@ import {
   ForgotPassword,
   GenerateOTP,
   Login,
+  logineWithGoogle,
   Logout,
   Register,
   ResetPassword,
@@ -19,5 +20,7 @@ router.post("/change-password", ChangePassword);
 router.get("/reset-password/:token", ResetPassword);
 router.post("/logout", authenticate, Logout);
 router.post("/send-otp", GenerateOTP);
+
+router.post("/google/callback", logineWithGoogle);
 
 export default router;

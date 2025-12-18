@@ -17,10 +17,12 @@ import {
   logoutSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  loginWithGoogleSchema,
 } from "../validators/authSchema.js";
 import Directory from "../models/directoryModel.js";
 import envConfig from "../config/env.js";
 import ForgotPasswordToken from "../models/forgotPasswordTokenModel.js";
+import { verifyIdToken } from "../service/googleAuthService.js";
 
 export const Login = asyncHandler(async (req, res) => {
   const { success, data } = loginSchema.safeParse(req.body);
@@ -327,4 +329,117 @@ export const ResetPassword = asyncHandler(async (req, res) => {
         "Password reset successful. Please login with your new password.",
       ),
     );
+});
+
+export const logineWithGoogle = asyncHandler(async (req, res) => {
+  const { success, data, error } = loginWithGoogleSchema.safeParse(req.body);
+
+  if (!success || error) throw new ApiError(400, error.message);
+  const { email, name, picture } = await verifyIdToken(data.tokenId);
+
+  const existUser = await User.findOne({ email });
+
+  if (existUser) {
+    // retrun response with creating session id with cookies
+    const existingSessions = await Session.find({ userId: existUser._id })
+      .sort({ createdAt: 1 }) // Oldest first
+      .select("_id");
+    if (existingSessions.length >= 2) {
+      await Session.deleteOne({ _id: existingSessions[0]._id });
+    }
+
+    const newSession = await Session.create({
+      userId: existUser._id,
+    });
+
+    const sessionExpiryTime = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+    res.cookie("sid", newSession._id.toString(), {
+      httpOnly: true,
+      signed: true,
+      sameSite: envConfig.NODE_ENV === "production" ? "none" : "lax",
+      secure: envConfig.NODE_ENV === "production",
+      maxAge: sessionExpiryTime,
+    });
+
+    const userData = {
+      _id: existUser._id,
+      name: existUser.name,
+      email: existUser.email,
+      picture: existUser.picture,
+      role: existUser.role,
+    };
+    return res
+      .status(200)
+      .json(new ApiResponse(200, userData, "User login successfully"));
+  }
+
+  const session = await mongoose.startSession();
+  let newUser;
+  let accessSessionId;
+
+  try {
+    await session.withTransaction(async () => {
+      const rootDirId = new mongoose.Types.ObjectId();
+      const userId = new mongoose.Types.ObjectId();
+
+      // Create user (password should be hashed by pre-save middleware)
+      const createdUsers = await User.create(
+        [
+          {
+            _id: userId,
+            name,
+            email,
+            picture,
+            rootDirId,
+          },
+        ],
+        { session },
+      );
+
+      newUser = createdUsers[0];
+
+      // Create root directory
+      await Directory.create(
+        [
+          {
+            _id: rootDirId,
+            userId: newUser._id,
+            name: `root-${email}`,
+            parentDirId: null, // Explicitly set null
+          },
+        ],
+        { session },
+      );
+
+      const accessSession = await Session.create({ userId: newUser._id });
+      accessSessionId = accessSession._id;
+    });
+  } catch (error) {
+    console.log(error);
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+
+  const sessionExpiryTime = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  res.cookie("sid", accessSessionId.toString(), {
+    httpOnly: true,
+    signed: true,
+    sameSite: envConfig.NODE_ENV === "production" ? "none" : "lax",
+    secure: envConfig.NODE_ENV === "production",
+    maxAge: sessionExpiryTime,
+  });
+
+  const userData = {
+    _id: newUser._id,
+    name: newUser.name,
+    email: newUser.email,
+    picture: newUser.picture,
+    role: newUser.role,
+  };
+  return res
+    .status(200)
+    .json(new ApiResponse(200, userData, "User login successfully"));
 });
