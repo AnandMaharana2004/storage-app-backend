@@ -51,7 +51,7 @@ function getMimeType(extension) {
 }
 
 function generateS3Key(userId, fileId, extension) {
-  return `users/${userId}/files/${fileId}${extension}`;
+  return `users-${userId}/${fileId}-${extension}`;
 }
 
 async function updateDirectorySizes(directoryId) {
@@ -137,6 +137,7 @@ export const RequestUploadUrl = asyncHandler(async (req, res) => {
     userId,
     isUploading: true,
     parentDirId: parentDirId || null,
+    s3Key,
   });
 
   // Generate presigned URL for S3 upload

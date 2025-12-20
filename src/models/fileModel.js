@@ -25,6 +25,10 @@ const fileSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Directory",
     },
+    s3Key: {
+      type: String,
+      require: true,
+    },
   },
   {
     strict: "throw",
