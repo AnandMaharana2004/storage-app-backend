@@ -1,6 +1,6 @@
-import { getSignedCookieValues } from "../service/cloudfrontService";
-import { ApiResponse } from "../utils/ApiResponse";
-import { asyncHandler } from "../utils/AsyncHandler";
+import { getSignedCookieValues } from "../service/cloudfrontService.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/AsyncHandler.js";
 
 export const RefreshCloudFrontCookies = asyncHandler(async (req, res) => {
   const signedCookies = getSignedCookieValues(`users-${req.usrId}/*`, {
