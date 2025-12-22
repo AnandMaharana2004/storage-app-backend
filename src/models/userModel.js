@@ -41,7 +41,7 @@ const userSchema = new Schema(
     maxStorageInBytes: {
       type: Number,
       required: true,
-      default: 15 * 1024 ** 3,
+      default: 1 * 1024 ** 3,
     },
     deleted: {
       type: Boolean,
