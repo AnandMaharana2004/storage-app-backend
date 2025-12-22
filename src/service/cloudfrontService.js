@@ -74,8 +74,8 @@ export const getSignedCookieValues = (resourcePath = "/*", options = {}) => {
   const cookies = generateSignedCookies(resourcePath, options);
 
   return {
-    "CloudFront-Policy": cookies.policy,
-    "CloudFront-Signature": cookies.signature,
-    "CloudFront-Key-Pair-Id": cookies.keyPairId,
+    "CloudFront-Policy": cookies["CloudFront-Policy"],
+    "CloudFront-Signature": cookies["CloudFront-Signature"],
+    "CloudFront-Key-Pair-Id": cookies["CloudFront-Key-Pair-Id"],
   };
 };
