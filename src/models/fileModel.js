@@ -1,4 +1,5 @@
 import { model, Schema } from "mongoose";
+import envConfig from "../config/env.js";
 
 const fileSchema = new Schema(
   {
@@ -27,6 +28,14 @@ const fileSchema = new Schema(
     },
     s3Key: {
       type: String,
+      required: true,
+    },
+    thumbnail: {
+      type: String,
+      // require : true
+    },
+    url: {
+      type: String,
       require: true,
     },
   },
@@ -35,6 +44,12 @@ const fileSchema = new Schema(
     timestamps: true,
   },
 );
+
+fileSchema.pre("save", function (next) {
+  if (!this.url && this.s3Key) {
+    this.url = `${envConfig.CLOUDFRONT_DOMAIN}/${this.s3Key}`;
+  }
+});
 
 const File = model("File", fileSchema);
 export default File;

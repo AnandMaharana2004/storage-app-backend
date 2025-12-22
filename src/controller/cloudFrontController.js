@@ -3,7 +3,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
 
 export const RefreshCloudFrontCookies = asyncHandler(async (req, res) => {
-  const signedCookies = getSignedCookieValues(`users-${req.usrId}/*`, {
+  const signedCookies = getSignedCookieValues(`/users-${req.user._id}/*`, {
     expiresInMinutes: 60,
     // ipAddress: req.ip,          // optional
     // dateGreaterThan: new Date() // optional
@@ -28,7 +28,7 @@ export const RefreshCloudFrontCookies = asyncHandler(async (req, res) => {
 
 export const GenerateCloudFrontCookies = asyncHandler(
   async (req, res, next) => {
-    const signedCookies = getSignedCookieValues(`users-${req.usrId}/*`, {
+    const signedCookies = getSignedCookieValues(`/users-${req.usrId}/*`, {
       expiresInMinutes: 60,
       // ipAddress: req.ip,          // optional
       // dateGreaterThan: new Date() // optional
