@@ -2,12 +2,27 @@ import express from "express";
 import { asyncHandler } from "./utils/AsyncHandler.js";
 import { ApiResponse } from "./utils/ApiResponse.js";
 import { globalErrorHandler } from "./middleware/globalErrorHandler.js";
-import { connectDb } from "./db/db.js";
+import { connectDB } from "./db/connection.js";
 import envConfig from "./config/env.js";
+import authRouter from "./routes/auth.route.js";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+
+import userRouter from "./routes/user.route.js";
+import directoryRouter from "./routes/directory.route.js";
+import fileRouter from "./routes/file.route.js";
+import cdnRouter from "./routes/cloudfront.route.js";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser(envConfig.COOKIE_SECRET));
+app.use(
+  cors({
+    origin: ["http://localhost:5173", envConfig.FRONTEND_URL],
+    credentials: true,
+  }),
+);
 
 app.get(
   "/health",
@@ -16,13 +31,14 @@ app.get(
   }),
 );
 
-//Db connection
-// const db = await connectDb();
-// app.use((req, res, next) => {
-//   req.db = db;
-//   next();
-// });
+// Db connection
+await connectDB();
 
+app.use("/auth", authRouter);
+app.use("/users", userRouter);
+app.use("/directory", directoryRouter);
+app.use("/files", fileRouter);
+app.use("/cdn", cdnRouter);
 app.use(globalErrorHandler);
 const PORT = envConfig.PORT;
 app.listen(PORT, () => {
