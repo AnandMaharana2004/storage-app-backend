@@ -18,6 +18,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   loginWithGoogleSchema,
+  ChangePasswordSchema,
 } from "../validators/authSchema.js";
 import Directory from "../models/directoryModel.js";
 import envConfig from "../config/env.js";
@@ -174,9 +175,18 @@ export const Logout = asyncHandler(async (req, res) => {
 });
 
 export const ChangePassword = asyncHandler(async (req, res) => {
+  const { success, data, error } = ChangePasswordSchema.safeParse(req.body);
+
+  if (!success || error) throw new ApiError(401, error.message, error);
+
+  const { newPassword } = data;
+
+  await User.findOneAndUpdate(req.user._id, {
+    password: newPassword,
+  });
   return res
     .status(200)
-    .json(new ApiResponse(200, null, "Change Password Under Construction"));
+    .json(new ApiResponse(200, null, "Change Password successfully"));
 });
 
 export const ForgotPassword = asyncHandler(async (req, res) => {

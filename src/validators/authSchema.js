@@ -47,3 +47,13 @@ export const resetPasswordSchema = z
 export const loginWithGoogleSchema = z.object({
   tokenId: z.string("Please provide google tokenId"),
 });
+
+export const ChangePasswordSchema = z
+  .object({
+    newPassword: z.string().min(1, "Please provide new password"),
+    confirmPassword: z.string().min(1, "Please provide confirm password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"], // error will show under confirmPassword
+  });
