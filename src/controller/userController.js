@@ -1,3 +1,4 @@
+import File from "../models/fileModel.js";
 import Session from "../models/sessionModel.js";
 import User from "../models/userModel.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -51,9 +52,28 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found");
   }
 
+  const userFiles = await File.find({ userId: user._id });
+  const usedStorageInBytes = userFiles.reduce(
+    (sum, file) => sum + file.size,
+    0,
+  );
+
+  const responseData = {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    picture: user.picture,
+    role: user.role,
+    rootDirId: user.rootDirId,
+    maxStorageInBytes: user.maxStorageInBytes,
+    usedStorageInBytes,
+    deleted: user.deleted,
+  };
   res
     .status(200)
-    .json(new ApiResponse(200, user, "Current user retrieved successfully"));
+    .json(
+      new ApiResponse(200, responseData, "Current user retrieved successfully"),
+    );
 });
 
 export const SearchUserByNameOrEmail = asyncHandler(async (req, res) => {

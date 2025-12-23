@@ -422,6 +422,12 @@ export const logineWithGoogle = asyncHandler(async (req, res) => {
         { session },
       );
 
+      await Directory.create({
+        userId: newUser._id,
+        name: `My Folder`,
+        parentDirId: rootDirId,
+      });
+
       const accessSession = await Session.create({ userId: newUser._id });
       accessSessionId = accessSession._id;
     });
