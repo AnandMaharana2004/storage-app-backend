@@ -5,6 +5,8 @@ import {
   DeleteUserSessions,
   getCurrentUser,
   SearchUserByNameOrEmail,
+  UpdateProfileName,
+  UpdateProfilePic,
 } from "../controller/userController.js";
 import { authenticate, isAdmin } from "../middleware/authMiddleware.js";
 
@@ -18,5 +20,7 @@ router.get("/me", getCurrentUser);
 router.get("/search", SearchUserByNameOrEmail); // GET /api/users/search?search=john&page=1&limit=10
 router.delete("/delete", isAdmin, DeleteUser);
 router.delete("/sessions", DeleteUserSessions);
+router.post("/update/name", UpdateProfileName);
+router.post("/update/profilepic", UpdateProfilePic);
 
 export default router;

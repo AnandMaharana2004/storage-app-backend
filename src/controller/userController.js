@@ -6,6 +6,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
 import {
   DeleteUserSessionsSchema,
+  UpdateProfileNameSchema,
   deleteUserSchema,
 } from "../validators/userSchema.js";
 
@@ -191,4 +192,27 @@ export const DeleteUserSessions = asyncHandler(async (req, res) => {
       "User sessions deleted successfully",
     ),
   );
+});
+
+export const UpdateProfilePic = asyncHandler(async (req, res) => {
+  res
+    .status(200)
+    .json(new ApiResponse(200, "Upadate Profileic under construction"));
+});
+
+export const UpdateProfileName = asyncHandler(async (req, res) => {
+  const { success, data, error } = UpdateProfileNameSchema.safeParse(req.body);
+  if (!success || error) throw new ApiError(401, error.message);
+
+  const { name } = data;
+
+  await User.findOneAndUpdate(
+    { _id: req.user._id },
+    {
+      name,
+    },
+  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, null, "User name updated successfully"));
 });

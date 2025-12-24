@@ -14,3 +14,7 @@ export const DeleteUserSessionsSchema = z.object({
     message: "Invalid MongoDB ObjectId format",
   }),
 });
+
+export const UpdateProfileNameSchema = z.object({
+  name: z.string("User new name required").min(1),
+});
