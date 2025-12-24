@@ -8,6 +8,7 @@ import {
   ShareFile,
   GetPublicFile,
   MoveFile,
+  MoveFileToTrash,
   GetFilesInDirectory,
 } from "../controller/fileController.js";
 import { authenticate } from "../middleware/authMiddleware.js";
@@ -27,5 +28,6 @@ router.patch("/rename", RenameFile);
 router.patch("/move", MoveFile);
 router.post("/share", ShareFile);
 router.delete("/delete", DeleteFile);
+router.patch("/move-to-trash", MoveFileToTrash);
 
 export default router;

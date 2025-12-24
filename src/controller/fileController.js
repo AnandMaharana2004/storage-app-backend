@@ -24,6 +24,8 @@ import {
   shareFileSchema,
   moveFileSchema,
   getFilesInDirectorySchema,
+  MoveFileToTrashSchema,
+  RemoveFromTrashSchema,
 } from "../validators/fileSchema.js";
 
 function getMimeType(extension) {
@@ -594,4 +596,48 @@ export const GetFilesInDirectory = asyncHandler(async (req, res) => {
       "Files retrieved successfully",
     ),
   );
+});
+
+export const MoveFileToTrash = asyncHandler(async (req, res) => {
+  const { success, data, error } = MoveFileToTrashSchema.safeParse(req.body);
+  if (!success || error) throw new ApiError(400, "Please provide fileId");
+
+  const { fileId } = data;
+
+  // TODO: we also have to implement add to Queue logic here
+
+  const file = await File.findOneAndUpdate(
+    { _id: fileId },
+    {
+      deletedAt: Date.now(),
+    },
+  );
+
+  if (!file) throw new ApiError(400, "File not found");
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, { fileId }, "File move to trash successfully"));
+});
+
+export const RemoveFromTrash = asyncHandler(async (req, res) => {
+  const { success, data, error } = RemoveFromTrashSchema.safeParse(req.body);
+  if (!success || error) throw new ApiError(400, "Please provide fileId");
+
+  const { fileId } = data;
+  // TODO: we also have to implement remove from Queue logic here
+  const file = await File.findOneAndUpdate(
+    { _id: fileId },
+    {
+      deletedAt: null,
+    },
+  );
+
+  if (!file) throw new ApiError(400, "File not found or file deleted");
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(200, { fileId }, "File remove from trash successfully"),
+    );
 });

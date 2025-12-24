@@ -81,3 +81,14 @@ export const getFilesInDirectorySchema = z.object({
       message: "Invalid directory ID",
     }),
 });
+
+export const MoveFileToTrashSchema = z.object({
+  fileId: z.string().min(1, "File ID is required").refine(objectIdValidator, {
+    message: "Invalid file ID",
+  }),
+});
+export const RemoveFromTrashSchema = z.object({
+  fileId: z.string().min(1, "File ID is required").refine(objectIdValidator, {
+    message: "Invalid file ID",
+  }),
+});
