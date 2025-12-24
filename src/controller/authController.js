@@ -181,9 +181,11 @@ export const ChangePassword = asyncHandler(async (req, res) => {
 
   const { newPassword } = data;
 
-  await User.findOneAndUpdate(req.user._id, {
-    password: newPassword,
-  });
+  const user = await User.findById(req.user._id).select("password");
+
+  user.password = newPassword;
+
+  await user.save();
   return res
     .status(200)
     .json(new ApiResponse(200, null, "Change Password successfully"));
