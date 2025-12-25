@@ -29,6 +29,7 @@ const envConfig = {
   CLOUDFRONT_KEY_PAIR_ID: process.env.CLOUDFRONT_KEY_PAIR_ID,
   CLOUDFRONT_DISTRIBUTION_ID: process.env.CLOUDFRONT_DISTRIBUTION_ID,
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  REDIS_URL: process.env.REDIS_URL,
 };
 
 if (isNaN(envConfig.PORT)) {
