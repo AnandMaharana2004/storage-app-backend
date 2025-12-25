@@ -27,6 +27,7 @@ import {
   MoveFileToTrashSchema,
   RemoveFromTrashSchema,
 } from "../validators/fileSchema.js";
+import { cancelDelete, scheduleDelete } from "../service/trashService.js";
 
 function getMimeType(extension) {
   const mimeTypes = {
@@ -599,45 +600,53 @@ export const GetFilesInDirectory = asyncHandler(async (req, res) => {
 });
 
 export const MoveFileToTrash = asyncHandler(async (req, res) => {
-  const { success, data, error } = MoveFileToTrashSchema.safeParse(req.body);
-  if (!success || error) throw new ApiError(400, "Please provide fileId");
+  const { success, data } = MoveFileToTrashSchema.safeParse(req.body);
+  if (!success) throw new ApiError(400, "Please provide fileId");
 
   const { fileId } = data;
 
-  // TODO: we also have to implement add to Queue logic here
+  const file = await File.findById(fileId);
+  if (!file) throw new ApiError(404, "File not found");
 
-  const file = await File.findOneAndUpdate(
-    { _id: fileId },
-    {
-      deletedAt: Date.now(),
-    },
-  );
+  if (file.deletedAt) {
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { fileId }, "File already in trash"));
+  }
 
-  if (!file) throw new ApiError(400, "File not found");
+  const deleteAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  await File.updateOne({ _id: fileId }, { deletedAt: deleteAt });
+
+  // 🔥 schedule delete job
+  await scheduleDelete(fileId, file.s3Key, 24 * 60 * 60 * 1000);
 
   res
     .status(200)
-    .json(new ApiResponse(200, { fileId }, "File move to trash successfully"));
+    .json(new ApiResponse(200, { fileId, deleteAt }, "File moved to trash"));
 });
 
 export const RemoveFromTrash = asyncHandler(async (req, res) => {
-  const { success, data, error } = RemoveFromTrashSchema.safeParse(req.body);
-  if (!success || error) throw new ApiError(400, "Please provide fileId");
+  const { success, data } = RemoveFromTrashSchema.safeParse(req.body);
+  if (!success) throw new ApiError(400, "Please provide fileId");
 
   const { fileId } = data;
-  // TODO: we also have to implement remove from Queue logic here
-  const file = await File.findOneAndUpdate(
-    { _id: fileId },
-    {
-      deletedAt: null,
-    },
-  );
 
-  if (!file) throw new ApiError(400, "File not found or file deleted");
+  const file = await File.findById(fileId);
+  if (!file) throw new ApiError(404, "File not found");
+
+  if (!file.deletedAt) {
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { fileId }, "File is not in trash"));
+  }
+
+  // 🔥 cancel scheduled job
+  await cancelDelete(fileId);
+
+  await File.updateOne({ _id: fileId }, { deletedAt: null });
 
   res
     .status(200)
-    .json(
-      new ApiResponse(200, { fileId }, "File remove from trash successfully"),
-    );
+    .json(new ApiResponse(200, { fileId }, "File restored successfully"));
 });
