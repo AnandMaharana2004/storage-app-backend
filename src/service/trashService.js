@@ -8,6 +8,7 @@ export async function scheduleDelete(file, delayMs) {
       s3Key: file.s3Key,
     },
     {
+      jobId: file._id.toString(), // 👈 IMPORTANT
       delay: delayMs,
       attempts: 3,
       backoff: {
