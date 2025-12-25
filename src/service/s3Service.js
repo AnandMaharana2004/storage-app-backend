@@ -47,7 +47,7 @@ export const deleteObject = ({
     Key: key,
   });
 
-  s3Client.send(command);
+  return s3Client.send(command);
 };
 
 export const headObject = ({ bucketName = envConfig.AWS_BUCKET_NAME, key }) => {
@@ -56,5 +56,5 @@ export const headObject = ({ bucketName = envConfig.AWS_BUCKET_NAME, key }) => {
     Key: key,
   });
 
-  s3Client.send(command);
+  return s3Client.send(command);
 };
