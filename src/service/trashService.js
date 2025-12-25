@@ -9,8 +9,13 @@ export async function scheduleDelete(file, delayMs) {
     },
     {
       delay: delayMs,
-      jobId: `file-delete-${file._id}`,
+      attempts: 3,
+      backoff: {
+        type: "exponential",
+        delay: 5000,
+      },
       removeOnComplete: true,
+      removeOnFail: false,
     },
   );
 
