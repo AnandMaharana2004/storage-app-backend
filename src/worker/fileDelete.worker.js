@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
-import { redis } from "../config/redis.config.js";
-import File from "../models/File.js";
+import { bullRedis } from "../config/redis.config.js";
+import File from "../models/fileModel.js";
 import { deleteObject } from "../service/s3Service.js";
 import { connectDB } from "../db/connection.js";
 import envConfig from "../config/env.js";
@@ -20,7 +20,7 @@ new Worker(
     await File.findByIdAndDelete(fileId);
   },
   {
-    connection: redis,
+    connection: bullRedis,
     concurrency: 5,
   },
 );
