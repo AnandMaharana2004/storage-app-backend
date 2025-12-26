@@ -220,6 +220,8 @@ export const CompleteUpload = asyncHandler(async (req, res) => {
           extension: file.extension,
           parentDirId: file.parentDirId,
           createdAt: file.createdAt,
+          url: file.url,
+          deletedAt: file.deletedAt || null,
         },
       },
       "File uploaded successfully",
