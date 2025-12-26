@@ -351,17 +351,16 @@ export const DeleteFile = asyncHandler(async (req, res) => {
   }
 
   const parentDirId = file.parentDirId;
-  const s3Key = generateS3Key(userId, fileId, file.extension);
 
   // Delete from S3
   try {
     await deleteObject({
       bucketName: envConfig.AWS_BUCKET_NAME,
-      key: s3Key,
+      key: file.s3Key,
     });
 
     // Invalidate CloudFront cache for the deleted file
-    await invalidateCloudFront([`/${s3Key}`]);
+    await invalidateCloudFront([`/${file.s3Key}`]);
   } catch (s3Error) {
     console.error("S3/CloudFront deletion error:", s3Error);
     // Continue with database deletion even if S3 fails
