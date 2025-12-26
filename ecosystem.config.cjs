@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "api",
+      name: "api-server",
       script: "src/index.js",
       instances: 1,
       autorestart: true,
