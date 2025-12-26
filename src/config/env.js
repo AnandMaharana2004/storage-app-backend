@@ -1,3 +1,5 @@
+import env from "dotenv";
+env.config();
 import process from "process";
 import { Buffer } from "buffer";
 const requiredVars = ["MONGO_URI", "PORT", "NODE_ENV"];
