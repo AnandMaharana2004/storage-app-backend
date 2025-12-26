@@ -13,7 +13,7 @@ jobs:
       SSH_HOST: 3.7.200.152
       SSH_USER: ubuntu
       REMOTE_APP_DIR: /home/ubuntu/storage-app-backend
-      PM2_APP_NAME: storageApp
+      PM2_ECOSYSTEM_FILE: ecosystem.config.cjs
 
     steps:
       - name: Setup SSH Key
@@ -52,9 +52,9 @@ jobs:
         run: |
           ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && npm ci --no-audit --no-fund && echo 'Dependencies installed'"
 
-      - name: Restart PM2 App
+      - name: Start/Reload PM2 Apps
         run: |
-          ssh "${SSH_USER}@${SSH_HOST}" "pm2 restart $PM2_APP_NAME && echo 'PM2 app restarted successfully'"
+          ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && pm2 startOrReload $PM2_ECOSYSTEM_FILE --update-env && echo 'PM2 apps started/reloaded successfully'"
 
       - name: Verify Deployment
         run: |
