@@ -619,7 +619,7 @@ export const MoveFileToTrash = asyncHandler(async (req, res) => {
   await File.updateOne({ _id: fileId }, { deletedAt: deleteAt });
 
   // 🔥 schedule delete job
-  await scheduleDelete(fileId, file.s3Key, 24 * 60 * 60 * 1000);
+  await scheduleDelete(file, 24 * 60 * 60 * 1000);
 
   res
     .status(200)
