@@ -10,6 +10,7 @@ import {
   MoveFile,
   MoveFileToTrash,
   GetFilesInDirectory,
+  RemoveFromTrash,
 } from "../controller/fileController.js";
 import { authenticate } from "../middleware/authMiddleware.js";
 
@@ -29,5 +30,6 @@ router.patch("/move", MoveFile);
 router.post("/share", ShareFile);
 router.delete("/delete", DeleteFile);
 router.patch("/move-to-trash", MoveFileToTrash);
+router.patch("/remove-from-trash", RemoveFromTrash);
 
 export default router;
