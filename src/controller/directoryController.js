@@ -163,7 +163,7 @@ export const GetDirectory = asyncHandler(async (req, res) => {
     parentDirId: directoryId,
     userId,
   })
-    .select("name size createdAt updatedAt")
+    .select("name size createdAt updatedAt parentDirId")
     .sort({ name: 1 })
     .lean();
 
@@ -172,7 +172,9 @@ export const GetDirectory = asyncHandler(async (req, res) => {
     parentDirId: directoryId,
     userId,
   })
-    .select("name size extension isUploading createdAt updatedAt url deletedAt")
+    .select(
+      "name size extension isUploading parentDirId createdAt updatedAt url deletedAt",
+    )
     .sort({ name: 1 })
     .lean();
 
