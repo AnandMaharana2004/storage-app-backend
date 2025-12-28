@@ -18,9 +18,12 @@ new Worker(
 
     await deleteObject(s3Bucket, s3Key);
     await File.findByIdAndDelete(fileId);
+    console.log(`fileId : ${fileId} and s3 key ${s3Key} deleted successfylly`);
   },
   {
     connection: bullRedis,
     concurrency: 5,
   },
 );
+
+console.log("Worker started successfully");
