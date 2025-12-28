@@ -4,6 +4,7 @@ module.exports = {
       name: "api-server",
       script: "src/index.js",
       instances: 1,
+      exec_mode: "cluster",
       autorestart: true,
       env: {
         NODE_ENV: "production",
@@ -13,6 +14,7 @@ module.exports = {
       name: "file-worker",
       script: "src/worker/fileDelete.worker.js",
       instances: 1,
+      exec_mode: "fork",
       autorestart: true,
       env: {
         NODE_ENV: "production",
