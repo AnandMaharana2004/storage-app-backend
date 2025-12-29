@@ -56,8 +56,3 @@ fileSchema.pre("save", function (next) {
 
 const File = model("File", fileSchema);
 export default File;
-
-fileSchema.index(
-  { deletedAt: 1 },
-  { expireAfterSeconds: 86400 }, // 24 hours
-);
