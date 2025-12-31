@@ -3,6 +3,7 @@ import envConfig from "../config/env.js";
 import { CreateInvalidationCommand } from "@aws-sdk/client-cloudfront";
 import { cloudFrontClient } from "../config/aws.config.js";
 
+// console.log(generateSignedUrl("private/users-694a8b5f5b267f891354d509/6954e6298e0351b30b0fe172-image/png", 5));
 export const generateSignedUrl = (s3ObjectKey, expiresInMinutes = 10) => {
   const url = `${envConfig.CLOUDFRONT_DOMAIN}/${s3ObjectKey}`;
 
@@ -31,11 +32,10 @@ export const invalidateCloudFront = async (paths = []) => {
   await cloudFrontClient.send(command);
 };
 
-export const generateSignedCookies = (resourcePath = "/*", options = {}) => {
+export const generateSignedCookies = (resourcePath, options = {}) => {
   const { expiresInMinutes = 60, ipAddress, dateGreaterThan } = options;
 
-  const url = `${envConfig.CLOUDFRONT_DOMAIN}${resourcePath}`;
-
+  const url = `${envConfig.CLOUDFRONT_DOMAIN}/private${resourcePath}`;
   const dateLessThanEpoch = Math.floor(
     (Date.now() + expiresInMinutes * 60 * 1000) / 1000,
   );

@@ -54,7 +54,7 @@ function getMimeType(extension) {
 }
 
 function generateS3Key(userId, fileId, extension) {
-  return `users-${userId}/${fileId}-${extension}`;
+  return `cdn/private/users-${userId}/${fileId}-${extension}`;
 }
 
 async function updateDirectorySizes(directoryId) {
@@ -620,7 +620,8 @@ export const MoveFileToTrash = asyncHandler(async (req, res) => {
   await File.updateOne({ _id: fileId }, { deletedAt: deleteAt });
 
   // 🔥 schedule delete job
-  await scheduleDelete(file, 24 * 60 * 60 * 1000);
+  // await scheduleDelete(file, 24 * 60 * 60 * 1000);
+  await scheduleDelete(file, 2 * 60 * 1000); // for local environment
 
   res
     .status(200)

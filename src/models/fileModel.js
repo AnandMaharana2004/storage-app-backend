@@ -50,7 +50,7 @@ const fileSchema = new Schema(
 
 fileSchema.pre("save", function (next) {
   if (!this.url && this.s3Key) {
-    this.url = `${envConfig.CLOUDFRONT_DOMAIN}/${this.s3Key}`;
+    this.url = `${envConfig.CLOUDFRONT_DOMAIN}/${this.s3Key.slice(4)}`;
   }
 });
 
