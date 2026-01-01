@@ -26,6 +26,7 @@ import {
   getFilesInDirectorySchema,
   MoveFileToTrashSchema,
   RemoveFromTrashSchema,
+  DownloadUrlSchema,
 } from "../validators/fileSchema.js";
 import { cancelDelete, scheduleDelete } from "../service/trashService.js";
 
@@ -651,4 +652,32 @@ export const RemoveFromTrash = asyncHandler(async (req, res) => {
   res
     .status(200)
     .json(new ApiResponse(200, { fileId }, "File restored successfully"));
+});
+
+export const DownloadUrl = asyncHandler(async (req, res) => {
+  const { success, data, error } = DownloadUrlSchema.safeParse(req.body);
+
+  if (!success || error) throw new ApiError(400, "File id missing");
+
+  const file = await File.findOne({
+    _id: data.fileId,
+    userId: req.user._id,
+  }).select("url name s3Key");
+
+  if (!file) throw new ApiError(400, "File not found or access deny");
+
+  const downloadUrl = await generateSignedUrl(`${file.s3Key.slice(4)}`, 5, {
+    isForDownload: true,
+    fileName: file.name,
+  });
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        downloadUrl,
+        fileName: file.name,
+      },
+      "file download url got successfully",
+    ),
+  );
 });
