@@ -92,3 +92,9 @@ export const RemoveFromTrashSchema = z.object({
     message: "Invalid file ID",
   }),
 });
+
+export const DownloadUrlSchema = z.object({
+  fileId: z.string().min(1, "File ID is required").refine(objectIdValidator, {
+    message: "Invalid file ID",
+  }),
+});
