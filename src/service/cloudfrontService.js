@@ -4,8 +4,22 @@ import { CreateInvalidationCommand } from "@aws-sdk/client-cloudfront";
 import { cloudFrontClient } from "../config/aws.config.js";
 
 // console.log(generateSignedUrl("private/users-694a8b5f5b267f891354d509/6954e6298e0351b30b0fe172-image/png", 5));
-export const generateSignedUrl = (s3ObjectKey, expiresInMinutes = 10) => {
-  const url = `${envConfig.CLOUDFRONT_DOMAIN}/${s3ObjectKey}`;
+export const generateSignedUrl = (
+  s3ObjectKey,
+  expiresInMinutes = 10,
+  options = {},
+) => {
+  const { isForDownload = false, fileName = null } = options;
+
+  let url = `${envConfig.CLOUDFRONT_DOMAIN}/${s3ObjectKey}`;
+
+  if (isForDownload) {
+    const encodedFileName = fileName
+      ? encodeURIComponent(fileName)
+      : "download";
+
+    url += `?response-content-disposition=attachment%3B%20filename%3D%22${encodedFileName}%22`;
+  }
 
   return getSignedUrl({
     url,
