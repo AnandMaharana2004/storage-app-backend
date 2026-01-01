@@ -11,6 +11,7 @@ import {
   MoveFileToTrash,
   GetFilesInDirectory,
   RemoveFromTrash,
+  DownloadUrl,
 } from "../controller/fileController.js";
 import { authenticate } from "../middleware/authMiddleware.js";
 
@@ -31,5 +32,6 @@ router.post("/share", ShareFile);
 router.delete("/delete", DeleteFile);
 router.patch("/move-to-trash", MoveFileToTrash);
 router.patch("/remove-from-trash", RemoveFromTrash);
+router.post("/download", DownloadUrl);
 
 export default router;
