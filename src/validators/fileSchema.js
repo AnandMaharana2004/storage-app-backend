@@ -13,7 +13,7 @@ export const requestUploadSchema = z.object({
   extension: z
     .string()
     .min(1, "Extension is required")
-    .max(10, "Extension too long"),
+    .max(20, "Extension too long"),
   parentDirId: z
     .string()
     .optional()
