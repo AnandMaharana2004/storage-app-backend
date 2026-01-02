@@ -10,10 +10,8 @@ export const requestUploadSchema = z.object({
     .min(1, "File name is required")
     .max(255, "File name too long"),
   size: z.number().positive("File size must be positive"),
-  extension: z
-    .string()
-    .min(1, "Extension is required")
-    .max(20, "Extension too long"),
+  extension: z.string().min(1, "Extension is required"),
+  // .max(20, "Extension too long"),
   parentDirId: z
     .string()
     .optional()
