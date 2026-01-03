@@ -30,8 +30,7 @@ const userSchema = new Schema(
     },
     picture: {
       type: String,
-      default:
-        "https://static.vecteezy.com/system/resources/previews/002/318/271/non_2x/user-profile-icon-free-vector.jpg",
+      default: "cdn/public/application/user-default-placeholder.webp",
     },
     role: {
       type: String,

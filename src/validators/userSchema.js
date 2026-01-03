@@ -18,3 +18,14 @@ export const DeleteUserSessionsSchema = z.object({
 export const UpdateProfileNameSchema = z.object({
   name: z.string("User new name required").min(1),
 });
+
+export const UpdateProfilePicSchema = z.object({
+  size: z
+    .number()
+    .positive("File size must be positive")
+    .max(1 * 1024 * 1024, "File size must be less than 1MB"),
+
+  extension: z.literal("image/webp", {
+    errorMap: () => ({ message: "Only webp images are allowed" }),
+  }),
+});
