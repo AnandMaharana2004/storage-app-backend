@@ -91,7 +91,7 @@ export const RequestUploadUrl = asyncHandler(async (req, res) => {
   const { success, data, error } = requestUploadSchema.safeParse(req.body);
 
   if (!success) {
-    throw new ApiError(400, error.errors[0].message);
+    throw new ApiError(400, error.issues[0].message);
   }
 
   const { name, size, extension, parentDirId } = data;
