@@ -1,6 +1,7 @@
 import express from "express";
 import {
   AllUsers,
+  ConformationProfilePicUploaded,
   DeleteUser,
   DeleteUserSessions,
   getCurrentUser,
@@ -21,6 +22,7 @@ router.get("/search", SearchUserByNameOrEmail); // GET /api/users/search?search=
 router.delete("/delete", isAdmin, DeleteUser);
 router.delete("/sessions", DeleteUserSessions);
 router.post("/update/name", UpdateProfileName);
-router.post("/update/profilepic", UpdateProfilePic);
+router.post("/profilePic/update", UpdateProfilePic);
+router.post("/profilePic/conformation", ConformationProfilePicUploaded);
 
 export default router;

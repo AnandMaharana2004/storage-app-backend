@@ -1,12 +1,16 @@
+import envConfig from "../config/env.js";
 import File from "../models/fileModel.js";
 import Session from "../models/sessionModel.js";
 import User from "../models/userModel.js";
+import { invalidateCloudFront } from "../service/cloudfrontService.js";
+import { generatePreSignUrl, headObject } from "../service/s3Service.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
 import {
   DeleteUserSessionsSchema,
   UpdateProfileNameSchema,
+  UpdateProfilePicSchema,
   deleteUserSchema,
 } from "../validators/userSchema.js";
 
@@ -195,11 +199,48 @@ export const DeleteUserSessions = asyncHandler(async (req, res) => {
 });
 
 export const UpdateProfilePic = asyncHandler(async (req, res) => {
+  const { success, data, error } = UpdateProfilePicSchema.safeParse(req.body);
+
+  if (!success || error) throw new ApiError(error.issues[0].message);
+
+  const { extension } = data;
+  // generate presigned Url
+  const uploadUrl = await generatePreSignUrl({
+    key: `cdn/public/users/${req.user._id}.webp`,
+    contentType: extension,
+    expiresIn: 300,
+  });
   res
     .status(200)
-    .json(new ApiResponse(200, "Upadate Profileic under construction"));
+    .json(
+      new ApiResponse(200, { uploadUrl }, "Get presigned url successfully"),
+    );
 });
 
+export const ConformationProfilePicUploaded = asyncHandler(async (req, res) => {
+  const result = await headObject({
+    key: `cdn/public/users/${req.user._id}.webp`,
+  });
+
+  if (!result) throw new ApiError(400, "Object not found");
+
+  // check is user profilePic already `${envConfig.CLOUDFRONT_DOMAIN}/public/users/${req.user._id}.webp`
+  // then we don't need to update that in our data base because it is always constant
+  const user = await User.findOneAndUpdate(
+    { _id: req.user._id },
+    {
+      picture: `${envConfig.CLOUDFRONT_DOMAIN}/public/users/${req.user._id}.webp`,
+    },
+  );
+
+  await invalidateCloudFront([`/cdn/public/users/${req.user._id}.webp`]);
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(200, { userId: user._id, profilePicUrl: user.picture }),
+    );
+});
 export const UpdateProfileName = asyncHandler(async (req, res) => {
   const { success, data, error } = UpdateProfileNameSchema.safeParse(req.body);
   if (!success || error) throw new ApiError(401, error.message);
