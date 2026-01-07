@@ -10,7 +10,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     env:
-      SSH_HOST: 3.7.200.152
+      SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ubuntu
       REMOTE_APP_DIR: /home/ubuntu/storage-app-backend
       PM2_ECOSYSTEM_FILE: ecosystem.config.cjs
@@ -42,19 +42,20 @@ jobs:
 
       - name: Stash Local Changes
         run: |
-          ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && git stash && echo 'Local changes stashed'"
+          ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && (git stash || true) && echo 'Checked for local changes'"
 
       - name: Pull Latest Code
+        id: git-pull
         run: |
           ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && git pull origin main && echo 'Git pull completed'"
 
-      - name: Install Dependencies
+      - name: Install Production Dependencies
         run: |
-          ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && npm ci --no-audit --no-fund && echo 'Dependencies installed'"
+          ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && npm ci --omit=dev --no-audit --no-fund && echo 'Production dependencies installed'"
 
       - name: Start/Reload PM2 Apps
         run: |
-          ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && pm2 startOrReload $PM2_ECOSYSTEM_FILE --update-env && echo 'PM2 apps started/reloaded successfully'"
+          ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && pm2 startOrReload $PM2_ECOSYSTEM_FILE --update-env && pm2 save && echo 'PM2 apps started/reloaded and saved successfully'"
 
       - name: Verify Deployment
         run: |
@@ -63,3 +64,9 @@ jobs:
       - name: Deployment Success
         run: |
           echo "Backend deployed successfully to EC2!"
+
+      - name: Rollback on Failure
+        if: failure()
+        run: |
+          echo "Deployment failed! Attempting rollback..."
+          ssh "${SSH_USER}@${SSH_HOST}" "cd $REMOTE_APP_DIR && git reset --hard HEAD@{1} && pm2 reload all && echo 'Rollback completed'"
