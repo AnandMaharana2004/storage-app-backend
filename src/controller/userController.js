@@ -82,7 +82,6 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 export const SearchUserByNameOrEmail = asyncHandler(async (req, res) => {
-  // Get search query from query params
   const searchQuery = req.query.search || "";
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
@@ -92,24 +91,24 @@ export const SearchUserByNameOrEmail = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Search query is required");
   }
 
-  // Search users by name or email using regex for partial matching
-  const searchRegex = new RegExp(searchQuery, "i"); // Case-insensitive search
+  const searchRegex = new RegExp(searchQuery, "i");
 
-  const users = await User.find({
+  // 🔑 Role-based field selection
+  const userSelectFields =
+    req.role === "user" ? "name email profilePicture" : "-password";
+
+  const filter = {
     deleted: false,
     $or: [{ name: searchRegex }, { email: searchRegex }],
-  })
-    .select("-password")
+  };
+
+  const users = await User.find(filter)
+    .select(userSelectFields)
     .skip(skip)
     .limit(limit)
     .lean();
 
-  // Get total count for pagination
-  const totalUsers = await User.countDocuments({
-    deleted: false,
-    $or: [{ name: searchRegex }, { email: searchRegex }],
-  });
-
+  const totalUsers = await User.countDocuments(filter);
   const totalPages = Math.ceil(totalUsers / limit);
 
   res.status(200).json(
