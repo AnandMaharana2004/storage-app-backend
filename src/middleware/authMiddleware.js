@@ -25,6 +25,8 @@ export const authenticate = asyncHandler(async (req, res, next) => {
 
   req.user = user;
   req.sessionId = session._id;
+  req.role = user.role;
+  req.rootDir = user.rootDirId;
 
   next();
 });
