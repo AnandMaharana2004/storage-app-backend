@@ -21,7 +21,6 @@ import {
   getFileSchema,
   renameFileSchema,
   deleteFileSchema,
-  shareFileSchema,
   moveFileSchema,
   getFilesInDirectorySchema,
   MoveFileToTrashSchema,
@@ -389,123 +388,6 @@ export const DeleteFile = asyncHandler(async (req, res) => {
   );
 });
 
-export const ShareFile = asyncHandler(async (req, res) => {
-  const { success, data, error } = shareFileSchema.safeParse(req.body);
-
-  if (!success) {
-    throw new ApiError(400, error.errors[0].message);
-  }
-
-  const { fileId, shareType, expiryHours, sharedWithUserIds } = data;
-  const userId = req.user._id;
-
-  // Find file and verify ownership
-  const file = await File.findOne({
-    _id: fileId,
-    userId,
-  });
-
-  if (!file) {
-    throw new ApiError(404, "File not found or access denied");
-  }
-
-  if (file.isUploading) {
-    throw new ApiError(400, "Cannot share file that is still uploading");
-  }
-
-  const s3Key = generateS3Key(userId, fileId, file.extension);
-  let shareUrl;
-  let expiresAt = null;
-
-  if (expiryHours) {
-    expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
-  }
-
-  if (shareType === "public") {
-    // Generate CloudFront signed URL for public sharing
-    const expiryMinutes = expiryHours ? expiryHours * 60 : 1440; // Default 24 hours
-    shareUrl = generateSignedUrl(s3Key, expiryMinutes);
-  } else if (shareType === "private") {
-    // Private sharing - verify users exist
-    if (!sharedWithUserIds || sharedWithUserIds.length === 0) {
-      throw new ApiError(400, "Please specify user IDs for private sharing");
-    }
-
-    // Verify all users exist
-    const users = await User.find({ _id: { $in: sharedWithUserIds } });
-    if (users.length !== sharedWithUserIds.length) {
-      throw new ApiError(400, "One or more user IDs are invalid");
-    }
-
-    // TODO: Create Share model/collection to track private shares
-    // For now, return a URL to the shared file endpoint
-    shareUrl = `${envConfig.APP_URL || "http://localhost:5000"}/api/files/shared/${fileId}`;
-  }
-
-  res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        shareUrl,
-        shareType,
-        expiresAt,
-        sharedWith: shareType === "private" ? sharedWithUserIds : null,
-        file: {
-          _id: file._id,
-          name: file.name,
-          size: file.size,
-          extension: file.extension,
-        },
-      },
-      `File shared ${shareType}ly successfully`,
-    ),
-  );
-});
-
-export const GetPublicFile = asyncHandler(async (req, res) => {
-  const { fileId } = req.params;
-
-  // Validate file ID
-  if (!mongoose.Types.ObjectId.isValid(fileId)) {
-    throw new ApiError(400, "Invalid file ID");
-  }
-
-  // Find file
-  const file = await File.findById(fileId);
-
-  if (!file) {
-    throw new ApiError(404, "File not found");
-  }
-
-  if (file.isUploading) {
-    throw new ApiError(400, "File is not available yet");
-  }
-
-  // TODO: Add permission check here
-  // Check if the file is shared publicly or if the requesting user has access
-
-  // Generate CloudFront signed URL
-  const s3Key = generateS3Key(file.userId, fileId, file.extension);
-  const downloadUrl = generateDownloadUrl(s3Key, 60); // 60 minutes expiry
-
-  res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        file: {
-          name: file.name,
-          size: file.size,
-          extension: file.extension,
-          createdAt: file.createdAt,
-        },
-        downloadUrl,
-        expiresIn: 3600, // 60 minutes in seconds
-      },
-      "Public file retrieved successfully",
-    ),
-  );
-});
-
 export const MoveFile = asyncHandler(async (req, res) => {
   const { success, data, error } = moveFileSchema.safeParse(req.body);
 
@@ -647,7 +529,7 @@ export const RemoveFromTrash = asyncHandler(async (req, res) => {
   // 🔥 cancel scheduled job
   await cancelDelete(fileId);
 
-  await File.updateOne({ _id: fileId }, { deletedAt: null });
+  await File.updateOne({ _id: fileId }, { $unset: { deletedAt: "" } });
 
   res
     .status(200)
