@@ -563,3 +563,98 @@ export const DownloadUrl = asyncHandler(async (req, res) => {
     ),
   );
 });
+
+export const GetAllTrashFiles = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  // Get all deleted files
+  const trashedFiles = await File.find({
+    userId,
+    deletedAt: { $exists: true, $ne: null },
+  })
+    .select(
+      "name size extension url parentDirId deletedAt createdAt updatedAt isUploading",
+    )
+    .sort({ deletedAt: -1 })
+    .lean();
+
+  // Build paths for each file
+  const filesWithPaths = await Promise.all(
+    trashedFiles.map(async (file) => {
+      const pathSegments = [];
+      let currentDirId = file.parentDirId;
+
+      // Traverse up the directory tree
+      while (currentDirId) {
+        const dir = await Directory.findOne({
+          _id: currentDirId,
+          userId,
+        })
+          .select("name parentDirId")
+          .lean();
+
+        if (!dir) break;
+
+        pathSegments.unshift({
+          _id: dir._id,
+          name: dir.name,
+        });
+
+        currentDirId = dir.parentDirId;
+      }
+
+      // Build path string
+      const path =
+        pathSegments.length > 0
+          ? "/" + pathSegments.map((seg) => seg.name).join("/")
+          : "/";
+
+      return {
+        ...file,
+        path,
+        pathSegments:
+          pathSegments.length > 0
+            ? pathSegments
+            : [{ _id: null, name: "Root" }],
+      };
+    }),
+  );
+
+  // Group by deletion date
+  const groupedByDate = filesWithPaths.reduce((acc, file) => {
+    const deletedDate = new Date(file.deletedAt).toDateString();
+    if (!acc[deletedDate]) {
+      acc[deletedDate] = {
+        date: deletedDate,
+        files: [],
+        count: 0,
+        totalSize: 0,
+      };
+    }
+    acc[deletedDate].files.push(file);
+    acc[deletedDate].count++;
+    acc[deletedDate].totalSize += file.size;
+    return acc;
+  }, {});
+
+  // Convert to array and sort by date (most recent first)
+  const sortedGroupedByDate = Object.values(groupedByDate).sort(
+    (a, b) => new Date(b.date) - new Date(a.date),
+  );
+
+  // Calculate total stats
+  const totalFiles = filesWithPaths.length;
+  const totalSize = filesWithPaths.reduce((sum, file) => sum + file.size, 0);
+
+  const response = {
+    groupedByDate: sortedGroupedByDate,
+    stats: {
+      totalFiles,
+      totalSize,
+    },
+  };
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, response, "Trash files retrieved successfully"));
+});
