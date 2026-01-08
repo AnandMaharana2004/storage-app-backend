@@ -15,11 +15,9 @@ export const createDirectorySchema = z.object({
 });
 
 export const updateDirectorySchema = z.object({
-  directoryId: z
-    .string()
-    .refine((id) => mongoose.Types.ObjectId.isValid(id), {
-      message: "Invalid directory ID",
-    }),
+  directoryId: z.string().refine((id) => mongoose.Types.ObjectId.isValid(id), {
+    message: "Invalid directory ID",
+  }),
   name: z
     .string()
     .min(1, "Directory name is required")
@@ -29,17 +27,17 @@ export const updateDirectorySchema = z.object({
 export const getDirectorySchema = z.object({
   directoryId: z
     .string()
-    .refine((id) => mongoose.Types.ObjectId.isValid(id), {
+    .optional()
+    .transform((id) => (id ? id : null))
+    .refine((id) => id === null || mongoose.Types.ObjectId.isValid(id), {
       message: "Invalid directory ID",
     }),
 });
 
 export const deleteDirectorySchema = z.object({
-  directoryId: z
-    .string()
-    .refine((id) => mongoose.Types.ObjectId.isValid(id), {
-      message: "Invalid directory ID",
-    }),
+  directoryId: z.string().refine((id) => mongoose.Types.ObjectId.isValid(id), {
+    message: "Invalid directory ID",
+  }),
 });
 
 export const MoveDirectorySchema = z.object({
