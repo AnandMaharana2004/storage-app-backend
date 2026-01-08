@@ -16,6 +16,7 @@ router.use(authenticate);
 router.post("/create", CreateDirectory);
 router.put("/update", UpdateDirectoryName);
 router.get("/:directoryId", GetDirectory);
+router.get("/", GetDirectory);
 router.delete("/delete", DeleteDirectory);
 router.put("/move", MoveDirectory);
 
