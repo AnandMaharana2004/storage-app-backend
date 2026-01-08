@@ -24,7 +24,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "test": "echo \"No tests yet\"",
-    "prepare": "husky",
+    "prepare": "node -e \"if (process.env.NODE_ENV !== 'production') require('husky').install()\"",
     "dbsetup": "node --env-file=.env src/db/setup.js"
   },
   "dependencies": {
