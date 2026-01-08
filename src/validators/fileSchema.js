@@ -48,17 +48,6 @@ export const deleteFileSchema = z.object({
   }),
 });
 
-export const shareFileSchema = z.object({
-  fileId: z.string().min(1, "File ID is required").refine(objectIdValidator, {
-    message: "Invalid file ID",
-  }),
-  shareType: z.enum(["public", "private"], {
-    message: "Share type must be 'public' or 'private'",
-  }),
-  expiryHours: z.number().positive("Expiry hours must be positive").optional(),
-  sharedWithUserIds: z.array(z.string()).optional(),
-});
-
 export const moveFileSchema = z.object({
   fileId: z.string().min(1, "File ID is required").refine(objectIdValidator, {
     message: "Invalid file ID",
