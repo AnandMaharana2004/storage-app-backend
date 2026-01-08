@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import User from "../models/userModel.js";
@@ -145,54 +146,319 @@ export const GetDirectory = asyncHandler(async (req, res) => {
     throw new ApiError(400, error.errors[0].message);
   }
 
-  const { directoryId } = data;
+  let { directoryId } = data;
   const userId = req.user._id;
 
-  // Find directory and verify ownership
+  if (!directoryId || directoryId === "null") {
+    directoryId = req.rootDir;
+  }
+
+  const directoryObjectId = new mongoose.Types.ObjectId(directoryId);
+
+  // Find directory and verify ownership (exclude deleted)
   const directory = await Directory.findOne({
-    _id: directoryId,
+    _id: directoryObjectId,
     userId,
+    deletedAt: { $exists: false }, // Exclude soft-deleted directories
   }).lean();
 
   if (!directory) {
     throw new ApiError(404, "Directory not found or access denied");
   }
 
-  // Get all subdirectories in this directory
-  const subdirectories = await Directory.find({
-    parentDirId: directoryId,
-    userId,
-  })
-    .select("name size createdAt updatedAt parentDirId")
-    .sort({ name: 1 })
-    .lean();
+  // Get subdirectories with their DEEP file and folder counts (nested)
+  const subdirectories = await Directory.aggregate([
+    {
+      $match: {
+        parentDirId: directoryObjectId,
+        userId,
+        deletedAt: { $exists: false }, // Exclude soft-deleted directories
+      },
+    },
+    {
+      $graphLookup: {
+        from: "directories",
+        startWith: "$_id",
+        connectFromField: "_id",
+        connectToField: "parentDirId",
+        as: "allSubdirectories",
+        restrictSearchWithMatch: {
+          userId,
+          deletedAt: { $exists: false }, // Exclude soft-deleted in nested lookup
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: "files",
+        let: {
+          dirId: "$_id",
+          allSubDirIds: "$allSubdirectories._id",
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  {
+                    $or: [
+                      { $eq: ["$parentDirId", "$$dirId"] },
+                      { $in: ["$parentDirId", "$$allSubDirIds"] },
+                    ],
+                  },
+                  { $eq: ["$userId", userId] },
+                ],
+              },
+              deletedAt: { $exists: false }, // Exclude soft-deleted files
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              count: { $sum: 1 },
+              totalSize: { $sum: "$size" },
+            },
+          },
+        ],
+        as: "fileStats",
+      },
+    },
+    {
+      $addFields: {
+        fileCount: {
+          $ifNull: [{ $arrayElemAt: ["$fileStats.count", 0] }, 0],
+        },
+        folderCount: { $size: "$allSubdirectories" },
+        filesSize: {
+          $ifNull: [{ $arrayElemAt: ["$fileStats.totalSize", 0] }, 0],
+        },
+      },
+    },
+    {
+      $project: {
+        name: 1,
+        size: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        parentDirId: 1,
+        fileCount: 1,
+        folderCount: 1,
+        totalSizeInByte: { $add: ["$filesSize", "$size"] },
+      },
+    },
+    {
+      $sort: { name: 1 },
+    },
+  ]);
 
-  // Get all files in this directory
+  // Get all files in this directory (direct children only, exclude deleted)
   const files = await File.find({
-    parentDirId: directoryId,
+    parentDirId: directoryObjectId,
     userId,
+    deletedAt: { $exists: false }, // Exclude soft-deleted files
   })
     .select(
-      "name size extension isUploading parentDirId createdAt updatedAt url deletedAt",
+      "name size extension isUploading parentDirId createdAt updatedAt url",
     )
     .sort({ name: 1 })
     .lean();
 
-  // Get breadcrumb path
-  const breadcrumbs = [];
-  let currentDir = directory;
+  // Get current directory DEEP stats (including all nested content)
+  const directoryStats = await Directory.aggregate([
+    {
+      $match: {
+        _id: directoryObjectId,
+        userId,
+        deletedAt: { $exists: false }, // Exclude soft-deleted
+      },
+    },
+    {
+      $graphLookup: {
+        from: "directories",
+        startWith: "$_id",
+        connectFromField: "_id",
+        connectToField: "parentDirId",
+        as: "allSubdirectories",
+        restrictSearchWithMatch: {
+          userId,
+          deletedAt: { $exists: false }, // Exclude soft-deleted in nested lookup
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: "files",
+        let: {
+          dirId: "$_id",
+          allSubDirIds: "$allSubdirectories._id",
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  {
+                    $or: [
+                      { $eq: ["$parentDirId", "$$dirId"] },
+                      { $in: ["$parentDirId", "$$allSubDirIds"] },
+                    ],
+                  },
+                  { $eq: ["$userId", userId] },
+                ],
+              },
+              deletedAt: { $exists: false }, // Exclude soft-deleted files
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              count: { $sum: 1 },
+              totalSize: { $sum: "$size" },
+            },
+          },
+        ],
+        as: "fileStats",
+      },
+    },
+    {
+      $lookup: {
+        from: "directories",
+        let: { dirId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$parentDirId", "$$dirId"] },
+                  { $eq: ["$userId", userId] },
+                ],
+              },
+              deletedAt: { $exists: false }, // Exclude soft-deleted
+            },
+          },
+          {
+            $count: "count",
+          },
+        ],
+        as: "directSubdirs",
+      },
+    },
+    {
+      $lookup: {
+        from: "files",
+        let: { dirId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$parentDirId", "$$dirId"] },
+                  { $eq: ["$userId", userId] },
+                ],
+              },
+              deletedAt: { $exists: false }, // Exclude soft-deleted files
+            },
+          },
+          {
+            $count: "count",
+          },
+        ],
+        as: "directFiles",
+      },
+    },
+    {
+      $project: {
+        // Direct children counts (for immediate display)
+        directFileCount: {
+          $ifNull: [{ $arrayElemAt: ["$directFiles.count", 0] }, 0],
+        },
+        directFolderCount: {
+          $ifNull: [{ $arrayElemAt: ["$directSubdirs.count", 0] }, 0],
+        },
+        // Total nested counts (for size calculation)
+        totalFileCount: {
+          $ifNull: [{ $arrayElemAt: ["$fileStats.count", 0] }, 0],
+        },
+        totalFolderCount: { $size: "$allSubdirectories" },
+        totalSizeInByte: {
+          $add: [
+            { $ifNull: [{ $arrayElemAt: ["$fileStats.totalSize", 0] }, 0] },
+            "$size",
+          ],
+        },
+      },
+    },
+  ]);
 
-  while (currentDir) {
-    breadcrumbs.unshift({
-      _id: currentDir._id,
-      name: currentDir.name,
+  const currentDirStats = directoryStats[0] || {
+    directFileCount: 0,
+    directFolderCount: 0,
+    totalFileCount: 0,
+    totalFolderCount: 0,
+    totalSizeInByte: directory.size,
+  };
+
+  // Optimized breadcrumb path using aggregation (exclude deleted)
+  const breadcrumbs = await Directory.aggregate([
+    {
+      $match: {
+        _id: directoryObjectId,
+        userId,
+        deletedAt: { $exists: false },
+      },
+    },
+    {
+      $graphLookup: {
+        from: "directories",
+        startWith: "$parentDirId",
+        connectFromField: "parentDirId",
+        connectToField: "_id",
+        as: "ancestors",
+        restrictSearchWithMatch: {
+          userId,
+          deletedAt: { $exists: false }, // Exclude soft-deleted from breadcrumbs
+        },
+      },
+    },
+    {
+      $project: {
+        path: {
+          $concatArrays: ["$ancestors", ["$$ROOT"]],
+        },
+      },
+    },
+    {
+      $unwind: "$path",
+    },
+    {
+      $replaceRoot: { newRoot: "$path" },
+    },
+    {
+      $project: {
+        _id: 1,
+        name: 1,
+        parentDirId: 1,
+      },
+    },
+    {
+      $sort: { parentDirId: 1 },
+    },
+  ]);
+
+  // Sort breadcrumbs properly (root first)
+  const sortedBreadcrumbs = [];
+  const breadcrumbMap = new Map(breadcrumbs.map((b) => [b._id.toString(), b]));
+
+  let current = breadcrumbs.find((b) => !b.parentDirId);
+  while (current) {
+    sortedBreadcrumbs.push({
+      _id: current._id,
+      name: current.name,
     });
-
-    if (currentDir.parentDirId) {
-      currentDir = await Directory.findById(currentDir.parentDirId).lean();
-    } else {
-      break;
-    }
+    current = breadcrumbs.find(
+      (b) =>
+        b.parentDirId && b.parentDirId.toString() === current._id.toString(),
+    );
   }
 
   const response = {
@@ -201,17 +467,16 @@ export const GetDirectory = asyncHandler(async (req, res) => {
       name: directory.name,
       size: directory.size,
       parentDirId: directory.parentDirId,
+      fileCount: currentDirStats.directFileCount, // Direct children only
+      folderCount: currentDirStats.directFolderCount, // Direct children only
+      totalSizeInByte: currentDirStats.totalSizeInByte, // Total including nested
       createdAt: directory.createdAt,
       updatedAt: directory.updatedAt,
+      isRoot: !directory.parentDirId, // Flag to identify root folder
     },
     subdirectories,
     files,
-    breadcrumbs,
-    stats: {
-      totalSubdirectories: subdirectories.length,
-      totalFiles: files.length,
-      totalSize: directory.size,
-    },
+    breadcrumbs: sortedBreadcrumbs,
   };
 
   res
