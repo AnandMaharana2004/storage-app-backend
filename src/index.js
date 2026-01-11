@@ -12,6 +12,7 @@ import userRouter from "./routes/user.route.js";
 import directoryRouter from "./routes/directory.route.js";
 import fileRouter from "./routes/file.route.js";
 import cdnRouter from "./routes/cloudfront.route.js";
+import sharedRoute from "./routes/share.route.js";
 
 const app = express();
 app.use(express.json());
@@ -39,6 +40,7 @@ app.use("/users", userRouter);
 app.use("/directory", directoryRouter);
 app.use("/files", fileRouter);
 app.use("/cdn", cdnRouter);
+app.use("/share", sharedRoute);
 app.use(globalErrorHandler);
 const PORT = envConfig.PORT;
 app.listen(PORT, () => {
