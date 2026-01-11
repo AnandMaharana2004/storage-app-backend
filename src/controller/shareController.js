@@ -2,12 +2,22 @@ import File from "../models/fileModel.js";
 import envConfig from "../config/env.js";
 import Share from "../models/shareModel.js";
 import User from "../models/userModel.js";
-import { getSignedCookieValues } from "../service/cloudfrontService.js";
+import {
+  generateSignedUrl,
+  getSignedCookieValues,
+} from "../service/cloudfrontService.js";
 // import { ensureShareKVSMapping } from "../service/kvsService.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
-import { BlockShareSchema, shareSchema } from "../validators/shareSchema.js";
+import {
+  BlockShareSchema,
+  CheckShareSchema,
+  DisablePublicShareSchema,
+  GetPublicFileSchema,
+  SharePublicFileSchema,
+  shareSchema,
+} from "../validators/shareSchema.js";
 import { nanoid } from "nanoid";
 import {
   deleteShareKVSMapping,
@@ -49,7 +59,6 @@ export const ShareAssets = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Cannot share file while uploading");
   }
 
-  // 3️⃣ Prevent duplicate active share
   const existingShare = await Share.findOne({
     resourceType,
     resourceId: resource._id,
@@ -65,7 +74,6 @@ export const ShareAssets = asyncHandler(async (req, res) => {
     );
   }
 
-  // 4️⃣ Visibility validation
   let sharedWithUsers = null;
 
   if (visibility === "private") {
@@ -138,10 +146,6 @@ export const ShareAssets = asyncHandler(async (req, res) => {
   );
 });
 
-/**
- * Block/Delete a share
- * DELETE /api/share/:shareId
- */
 export const BlockShare = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
@@ -169,10 +173,6 @@ export const BlockShare = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { shareId }, "Share deleted successfully"));
 });
 
-/**
- * Access a privately shared file
- * GET /api/share/private/:shareId
- */
 export const AccessSharedPrivate = asyncHandler(async (req, res) => {
   const { shareId } = req.params;
   const userId = req.user?._id;
@@ -261,10 +261,6 @@ export const AccessSharedPrivate = asyncHandler(async (req, res) => {
   );
 });
 
-/**
- * Access a publicly shared file
- * GET /api/share/public/:shareId
- */
 export const AccessSharedPublic = asyncHandler(async (req, res) => {
   const { shareId } = req.params;
 
@@ -348,10 +344,6 @@ export const AccessSharedPublic = asyncHandler(async (req, res) => {
   );
 });
 
-/**
- * Get share details (metadata only, no file access)
- * GET /api/share/details/:shareId
- */
 export const GetShareDetails = asyncHandler(async (req, res) => {
   const { shareId } = req.params;
   const userId = req.user?._id || null;
@@ -420,10 +412,6 @@ export const GetShareDetails = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, responseData, "Share details retrieved"));
 });
 
-/**
- * Get all shares created by the current user
- * GET /api/share/my-shares
- */
 export const GetMyShares = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
@@ -464,4 +452,88 @@ export const GetMyShares = asyncHandler(async (req, res) => {
         "Shares retrieved successfully",
       ),
     );
+});
+
+export const SharePublicFile = asyncHandler(async (req, res) => {
+  const { success, data, error } = SharePublicFileSchema.safeParse(req.body);
+  if (!success) throw new ApiError(400, error.issues[0].message);
+
+  const { fileId } = data;
+
+  const file = await File.findById(fileId);
+
+  if (!file) throw new ApiError(400, "No File found");
+
+  const existShareFile = await Share.findOne({
+    resourceId: fileId,
+    resourceType: "file",
+  });
+
+  if (existShareFile) {
+    throw new ApiError(409, "File already share");
+  } else {
+    // create new one and return the url
+    const shareId = nanoid(12);
+    const shareFile = await Share.create({
+      shareId,
+      resourceType: "file",
+      resourceId: fileId,
+      ownerId: req.user._id,
+      visibility: "public",
+    });
+    const shareFileUrl = `${envConfig.FRONTEND_URL1}/shares/${shareFile.shareId}`;
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { fileId, url: shareFileUrl }));
+  }
+});
+
+export const GetPublicFile = asyncHandler(async (req, res) => {
+  const { success, data, error } = GetPublicFileSchema.safeParse(req.params);
+  if (!success || error) throw new ApiError(400, error.issues[0].message);
+
+  const { sharedToken: shareId } = data;
+
+  const share = await Share.findOne({ shareId });
+
+  if (!share) throw new ApiError(400, "Invalid share token");
+
+  const file = await File.findById(share.resourceId).select("-url");
+
+  if (!file) throw new ApiError(400, "File not found or access denied");
+  const signedUrl = await generateSignedUrl(file.s3Key.slice(4));
+  file.url = signedUrl;
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, file, "Get public asset successfully "));
+});
+
+export const DisablePublicShare = asyncHandler(async (req, res) => {
+  const { success, data, error } = DisablePublicShareSchema.safeParse(
+    req.params,
+  );
+  if (!success) throw new ApiError(400, error.issues[0].message);
+
+  const { fileId } = data;
+
+  const share = await Share.findOneAndDelete({ resourceId: fileId });
+  if (!share) throw new ApiError(400, "Invalid fileId or share data not found");
+  res.status(200).json(new ApiResponse(200, null, "Disable public share"));
+});
+
+export const CheckShare = asyncHandler(async (req, res) => {
+  const { success, data, error } = CheckShareSchema.safeParse(req.query);
+  if (!success || error) throw new ApiError(400, error.issues[0].message);
+
+  const { fileId } = data;
+
+  const share = await Share.findOne({
+    resourceId: fileId,
+    resourceType: "file",
+  });
+
+  if (!share) throw new ApiError(404, "No share find");
+  const shareFileUrl = `${envConfig.FRONTEND_URL1}/shares/${share.shareId}`;
+  return res.status(200).json(new ApiResponse(200, { url: shareFileUrl }));
 });

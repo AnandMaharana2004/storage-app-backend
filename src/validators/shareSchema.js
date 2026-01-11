@@ -43,3 +43,21 @@ export const shareSchema = z
 export const BlockShareSchema = z.object({
   shareId: z.string("Please provide sharedId"),
 });
+
+export const SharePublicFileSchema = z.object({
+  fileId: z.string().min(1, "File ID is required").refine(objectIdValidator, {
+    message: "Invalid file ID",
+  }),
+});
+
+export const GetPublicFileSchema = z.object({
+  sharedToken: z.string().min(1, "Please provide shared id"),
+});
+
+export const DisablePublicShareSchema = z.object({
+  fileId: z.string().min(1, "Please provide shared id"),
+});
+
+export const CheckShareSchema = z.object({
+  fileId: z.string().min(1, "Please provide shared id"),
+});
