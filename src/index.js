@@ -26,7 +26,7 @@ app.use(
   }),
 );
 
-setupSwagger(app);
+if (envConfig.NODE_ENV == "development") setupSwagger(app);
 
 app.get(
   "/health",
