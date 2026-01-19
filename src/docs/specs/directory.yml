@@ -1,0 +1,509 @@
+paths:
+  /directory/create:
+    post:
+      tags:
+        - directory
+      summary: Create a new directory
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: My Documents
+                parentDirId:
+                  type: string
+                  nullable: true
+                  description: Parent directory ID (null for root level)
+                  example: 507f1f77bcf86cd799439011
+      responses:
+        201:
+          description: Directory created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 201
+                  data:
+                    $ref: "#/components/schemas/Directory"
+                  message:
+                    type: string
+                    example: Directory created successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Parent directory not found or access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        409:
+          description: Directory with this name already exists in this location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /directory/update:
+    put:
+      tags:
+        - directory
+      summary: Update directory name
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - directoryId
+                - name
+              properties:
+                directoryId:
+                  type: string
+                  example: 507f1f77bcf86cd799439011
+                name:
+                  type: string
+                  example: Renamed Folder
+      responses:
+        200:
+          description: Directory name updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    $ref: "#/components/schemas/Directory"
+                  message:
+                    type: string
+                    example: Directory name updated successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid input or cannot rename root directory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Directory not found or access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        409:
+          description: Directory with this name already exists in this location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /directory/{directoryId}:
+    get:
+      tags:
+        - directory
+      summary: Get directory contents with subdirectories, files, and breadcrumbs
+      description: Returns directory details including all subdirectories, files, nested counts, and breadcrumb navigation path
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: directoryId
+          required: true
+          schema:
+            type: string
+          description: Directory ID (use 'null' for root directory)
+          example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: Directory retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      directory:
+                        type: object
+                        properties:
+                          _id:
+                            type: string
+                            example: 507f1f77bcf86cd799439011
+                          name:
+                            type: string
+                            example: My Documents
+                          size:
+                            type: integer
+                            example: 0
+                          parentDirId:
+                            type: string
+                            nullable: true
+                            example: 507f1f77bcf86cd799439010
+                          fileCount:
+                            type: integer
+                            description: Number of direct child files
+                            example: 5
+                          folderCount:
+                            type: integer
+                            description: Number of direct child folders
+                            example: 3
+                          totalSizeInByte:
+                            type: integer
+                            description: Total size including all nested content
+                            example: 10485760
+                          createdAt:
+                            type: string
+                            format: date-time
+                          updatedAt:
+                            type: string
+                            format: date-time
+                          isRoot:
+                            type: boolean
+                            example: false
+                      subdirectories:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                            name:
+                              type: string
+                            size:
+                              type: integer
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+                            parentDirId:
+                              type: string
+                              nullable: true
+                            fileCount:
+                              type: integer
+                              description: Total nested files
+                            folderCount:
+                              type: integer
+                              description: Total nested folders
+                            totalSizeInByte:
+                              type: integer
+                              description: Total size including nested content
+                      files:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                            name:
+                              type: string
+                            size:
+                              type: integer
+                            extension:
+                              type: string
+                            isUploading:
+                              type: boolean
+                            parentDirId:
+                              type: string
+                              nullable: true
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+                            url:
+                              type: string
+                              nullable: true
+                      breadcrumbs:
+                        type: array
+                        description: Navigation path from root to current directory
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                            name:
+                              type: string
+                  message:
+                    type: string
+                    example: Directory retrieved successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid directory ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Directory not found or access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /directory:
+    get:
+      tags:
+        - directory
+      summary: Get root directory contents
+      description: Same as GET /directory/{directoryId} but defaults to root directory
+      security:
+        - cookieAuth: []
+      responses:
+        200:
+          description: Root directory retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      directory:
+                        type: object
+                        properties:
+                          _id:
+                            type: string
+                          name:
+                            type: string
+                          size:
+                            type: integer
+                          parentDirId:
+                            type: string
+                            nullable: true
+                          fileCount:
+                            type: integer
+                          folderCount:
+                            type: integer
+                          totalSizeInByte:
+                            type: integer
+                          createdAt:
+                            type: string
+                            format: date-time
+                          updatedAt:
+                            type: string
+                            format: date-time
+                          isRoot:
+                            type: boolean
+                            example: true
+                      subdirectories:
+                        type: array
+                        items:
+                          type: object
+                      files:
+                        type: array
+                        items:
+                          type: object
+                      breadcrumbs:
+                        type: array
+                        items:
+                          type: object
+                  message:
+                    type: string
+                    example: Directory retrieved successfully
+                  success:
+                    type: boolean
+                    example: true
+
+  /directory/delete:
+    patch:
+      tags:
+        - directory
+      summary: Delete a directory and all its contents
+      description: Recursively deletes directory, all subdirectories, and files. Cannot delete root directory.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - directoryId
+              properties:
+                directoryId:
+                  type: string
+                  example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: Directory deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      deletedDirectoryId:
+                        type: string
+                        example: 507f1f77bcf86cd799439011
+                  message:
+                    type: string
+                    example: Directory deleted successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid input or cannot delete root directory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Directory not found or access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /directory/move:
+    put:
+      tags:
+        - directory
+      summary: Move directory to a different parent directory
+      description: Cannot move root directory or create circular references
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - directoryId
+              properties:
+                directoryId:
+                  type: string
+                  example: 507f1f77bcf86cd799439011
+                newParentDirId:
+                  type: string
+                  nullable: true
+                  description: Target parent directory ID (null for root level)
+                  example: 507f1f77bcf86cd799439012
+      responses:
+        200:
+          description: Directory moved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    $ref: "#/components/schemas/Directory"
+                  message:
+                    type: string
+                    example: Directory moved successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid input, cannot move root directory, or circular reference detected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Directory or new parent directory not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Directory:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: My Documents
+        size:
+          type: integer
+          description: Total size of directory contents
+          example: 0
+        userId:
+          type: string
+          example: 507f1f77bcf86cd799439010
+        parentDirId:
+          type: string
+          nullable: true
+          example: 507f1f77bcf86cd799439010
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Error message
+        success:
+          type: boolean
+          example: false
+        errors:
+          type: array
+          items:
+            type: object
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sid
+      description: Session ID stored in HTTP-only cookie
