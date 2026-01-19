@@ -55,7 +55,9 @@
     "globals": "^16.5.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "prettier": "3.7.4"
+    "prettier": "3.7.4",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "lint-staged": {
     "*.{js,json,md}": [
