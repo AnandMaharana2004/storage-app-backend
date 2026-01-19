@@ -343,7 +343,7 @@ export const ResetPassword = asyncHandler(async (req, res) => {
     );
 });
 
-export const logineWithGoogle = asyncHandler(async (req, res) => {
+export const loginWithGoogle = asyncHandler(async (req, res) => {
   const { success, data, error } = loginWithGoogleSchema.safeParse(req.body);
 
   if (!success || error) throw new ApiError(400, error.message);
