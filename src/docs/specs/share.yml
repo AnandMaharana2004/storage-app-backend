@@ -1,0 +1,258 @@
+paths:
+  /shares/public/exist:
+    get:
+      tags:
+        - Sharing
+      summary: Check if a file has an active public share
+      parameters:
+        - in: query
+          name: fileId
+          required: true
+          schema:
+            type: string
+          description: File ID to check for public share
+          example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: Public share found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                        example: https://example.com/shares/abc123xyz456
+                  message:
+                    type: string
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid file ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: No share found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /shares/public/{sharedToken}:
+    get:
+      tags:
+        - Sharing
+      summary: Access a publicly shared file
+      description: Get file details and signed download URL using share token
+      parameters:
+        - in: path
+          name: sharedToken
+          required: true
+          schema:
+            type: string
+          description: Public share token (shareId)
+          example: abc123xyz456
+      responses:
+        200:
+          description: Public file retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: 507f1f77bcf86cd799439011
+                      name:
+                        type: string
+                        example: document.pdf
+                      size:
+                        type: integer
+                        example: 2048576
+                      extension:
+                        type: string
+                        example: .pdf
+                      userId:
+                        type: string
+                      isUploading:
+                        type: boolean
+                        example: false
+                      parentDirId:
+                        type: string
+                        nullable: true
+                      s3Key:
+                        type: string
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      url:
+                        type: string
+                        description: Signed CloudFront URL for download
+                        example: https://cloudfront.example.com/signed-url
+                  message:
+                    type: string
+                    example: Get public asset successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid share token or file not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /shares/public:
+    post:
+      tags:
+        - Sharing
+      summary: Create a public share for a file
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+              properties:
+                fileId:
+                  type: string
+                  example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: File shared publicly
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      fileId:
+                        type: string
+                        example: 507f1f77bcf86cd799439011
+                      url:
+                        type: string
+                        description: Public share URL
+                        example: https://example.com/shares/abc123xyz456
+                  message:
+                    type: string
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: No file found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        409:
+          description: File already shared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /shares/public/{fileId}:
+    delete:
+      tags:
+        - Sharing
+      summary: Disable public sharing for a file
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: fileId
+          required: true
+          schema:
+            type: string
+          description: File ID to disable sharing for
+          example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: Public share disabled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: null
+                  message:
+                    type: string
+                    example: Disable public share
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid fileId or share data not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Error message
+        success:
+          type: boolean
+          example: false
+        errors:
+          type: array
+          items:
+            type: object
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sid
+      description: Session ID stored in HTTP-only cookie
