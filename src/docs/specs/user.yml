@@ -1,0 +1,543 @@
+paths:
+  /users/me:
+    get:
+      tags:
+        - User
+      summary: Get current authenticated user profile
+      security:
+        - cookieAuth: []
+      responses:
+        200:
+          description: Current user retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: 507f1f77bcf86cd799439011
+                      name:
+                        type: string
+                        example: John Doe
+                      email:
+                        type: string
+                        example: john@example.com
+                      picture:
+                        type: string
+                        nullable: true
+                        example: https://cloudfront.example.com/public/users/123.webp
+                      role:
+                        type: string
+                        example: user
+                      rootDirId:
+                        type: string
+                        example: 507f1f77bcf86cd799439012
+                      maxStorageInBytes:
+                        type: integer
+                        example: 10737418240
+                      usedStorageInBytes:
+                        type: integer
+                        example: 2147483648
+                      deleted:
+                        type: boolean
+                        example: false
+                  message:
+                    type: string
+                    example: Current user retrieved successfully
+                  success:
+                    type: boolean
+                    example: true
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /users/all:
+    get:
+      tags:
+        - User
+      summary: Get all users with pagination
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Number of users per page
+      responses:
+        200:
+          description: Users found successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      users:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/User"
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+                  message:
+                    type: string
+                    example: Users found successfully
+                  success:
+                    type: boolean
+                    example: true
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /users/search:
+    get:
+      tags:
+        - User
+      summary: Search users by name or email
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: search
+          required: true
+          schema:
+            type: string
+          description: Search query for name or email
+          example: john
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Number of results per page
+      responses:
+        200:
+          description: Users search completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      users:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/User"
+                      searchQuery:
+                        type: string
+                        example: john
+                      pagination:
+                        $ref: "#/components/schemas/Pagination"
+                  message:
+                    type: string
+                    example: Users search completed successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Search query is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /users/delete:
+    delete:
+      tags:
+        - User
+      summary: Delete a user (Admin only)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    $ref: "#/components/schemas/User"
+                  message:
+                    type: string
+                    example: User deleted successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid input or cannot delete own account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        403:
+          description: Only admins can delete users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: User does not exist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /users/sessions:
+    delete:
+      tags:
+        - User
+      summary: Delete user sessions
+      description: Users can delete their own sessions, admins can delete any user's sessions
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: User sessions deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      deletedCount:
+                        type: integer
+                        example: 3
+                      userId:
+                        type: string
+                        example: 507f1f77bcf86cd799439011
+                  message:
+                    type: string
+                    example: User sessions deleted successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid user ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        403:
+          description: You can only delete your own sessions or must be an admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /users/update/name:
+    post:
+      tags:
+        - User
+      summary: Update user profile name
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: Jane Doe
+                  minLength: 1
+      responses:
+        200:
+          description: User name updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: null
+                  message:
+                    type: string
+                    example: User name updated successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /users/profilePic/update:
+    post:
+      tags:
+        - User
+      summary: Get presigned URL to upload profile picture
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - extension
+              properties:
+                extension:
+                  type: string
+                  example: image/webp
+                  description: Content type of the image (e.g., image/webp, image/jpeg)
+      responses:
+        200:
+          description: Presigned URL generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      uploadUrl:
+                        type: string
+                        example: https://s3.amazonaws.com/bucket/path?signature=xyz
+                  message:
+                    type: string
+                    example: Get presigned url successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid extension
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /users/profilePic/conformation:
+    post:
+      tags:
+        - User
+      summary: Confirm profile picture upload completion
+      description: After uploading to S3 using presigned URL, call this to update user profile
+      security:
+        - cookieAuth: []
+      responses:
+        200:
+          description: Profile picture confirmed and updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        example: 507f1f77bcf86cd799439011
+                      profilePicUrl:
+                        type: string
+                        example: https://cloudfront.example.com/public/users/507f1f77bcf86cd799439011.webp
+                  message:
+                    type: string
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Object not found in S3
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: John Doe
+        email:
+          type: string
+          example: john@example.com
+        picture:
+          type: string
+          nullable: true
+          example: https://cloudfront.example.com/public/users/123.webp
+        role:
+          type: string
+          example: user
+        rootDirId:
+          type: string
+          example: 507f1f77bcf86cd799439012
+        maxStorageInBytes:
+          type: integer
+          example: 10737418240
+        deleted:
+          type: boolean
+          example: false
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+          example: 1
+        totalPages:
+          type: integer
+          example: 10
+        totalUsers:
+          type: integer
+          example: 95
+        limit:
+          type: integer
+          example: 10
+        hasNextPage:
+          type: boolean
+          example: true
+        hasPrevPage:
+          type: boolean
+          example: false
+
+    Error:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Error message
+        success:
+          type: boolean
+          example: false
+        errors:
+          type: array
+          items:
+            type: object
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sid
+      description: Session ID stored in HTTP-only cookie
