@@ -1,0 +1,786 @@
+paths:
+  /files/upload/request:
+    post:
+      tags:
+        - Files
+      summary: Request presigned URL for file upload
+      description: Generates a presigned S3 URL for uploading a file and creates a file record in the database
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - size
+                - extension
+              properties:
+                name:
+                  type: string
+                  example: document.pdf
+                size:
+                  type: integer
+                  description: File size in bytes
+                  example: 2048576
+                extension:
+                  type: string
+                  example: .pdf
+                parentDirId:
+                  type: string
+                  nullable: true
+                  example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: Upload URL generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      uploadUrl:
+                        type: string
+                        example: https://s3.amazonaws.com/bucket/path?signature=xyz
+                      fileId:
+                        type: string
+                        example: 507f1f77bcf86cd799439011
+                      s3Key:
+                        type: string
+                        example: cdn/private/users-123/456-.pdf
+                      expiresIn:
+                        type: integer
+                        example: 900
+                  message:
+                    type: string
+                    example: Upload URL generated successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Parent directory not found or access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        413:
+          description: Storage limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/upload/complete:
+    post:
+      tags:
+        - Files
+      summary: Complete file upload
+      description: Confirms that file has been successfully uploaded to S3 and marks upload as complete
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+              properties:
+                fileId:
+                  type: string
+                  example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      file:
+                        $ref: '#/components/schemas/FileInfo'
+                  message:
+                    type: string
+                    example: File uploaded successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: File not found in S3 or upload already completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: File not found or access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/{fileId}:
+    get:
+      tags:
+        - Files
+      summary: Get file details with download URL
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: fileId
+          required: true
+          schema:
+            type: string
+          description: File ID
+          example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: File retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      file:
+                        type: object
+                        properties:
+                          _id:
+                            type: string
+                            example: 507f1f77bcf86cd799439011
+                          name:
+                            type: string
+                            example: document.pdf
+                          size:
+                            type: integer
+                            example: 2048576
+                          extension:
+                            type: string
+                            example: .pdf
+                          createdAt:
+                            type: string
+                            format: date-time
+                          updatedAt:
+                            type: string
+                            format: date-time
+                      downloadUrl:
+                        type: string
+                        example: https://cloudfront.example.com/signed-url
+                      expiresIn:
+                        type: integer
+                        example: 3600
+                  message:
+                    type: string
+                    example: File retrieved successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: File is still uploading
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: File not found or access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/directory/{directoryId}:
+    get:
+      tags:
+        - Files
+      summary: Get all files in a directory
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: directoryId
+          required: true
+          schema:
+            type: string
+          description: Directory ID (use 'root' for root directory)
+          example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: Files retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      files:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                            name:
+                              type: string
+                            size:
+                              type: integer
+                            extension:
+                              type: string
+                            isUploading:
+                              type: boolean
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+                      count:
+                        type: integer
+                        example: 5
+                      directoryId:
+                        type: string
+                        nullable: true
+                        example: 507f1f77bcf86cd799439011
+                  message:
+                    type: string
+                    example: Files retrieved successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid directory ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/rename:
+    patch:
+      tags:
+        - Files
+      summary: Rename a file
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+                - newName
+              properties:
+                fileId:
+                  type: string
+                  example: 507f1f77bcf86cd799439011
+                newName:
+                  type: string
+                  example: renamed-document.pdf
+      responses:
+        200:
+          description: File renamed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      file:
+                        $ref: '#/components/schemas/FileInfo'
+                  message:
+                    type: string
+                    example: File renamed successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: File not found or access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        409:
+          description: A file with this name already exists in this directory
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/move:
+    patch:
+      tags:
+        - Files
+      summary: Move file to different directory
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+              properties:
+                fileId:
+                  type: string
+                  example: 507f1f77bcf86cd799439011
+                newParentDirId:
+                  type: string
+                  nullable: true
+                  description: Target directory ID (null for root)
+                  example: 507f1f77bcf86cd799439012
+      responses:
+        200:
+          description: File moved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      file:
+                        $ref: '#/components/schemas/FileInfo'
+                  message:
+                    type: string
+                    example: File moved successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: File or target directory not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/delete:
+    delete:
+      tags:
+        - Files
+      summary: Permanently delete a file
+      description: Deletes file from both S3 and database, invalidates CloudFront cache
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+              properties:
+                fileId:
+                  type: string
+                  example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: File deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      deletedFileId:
+                        type: string
+                        example: 507f1f77bcf86cd799439011
+                      deletedFileName:
+                        type: string
+                        example: document.pdf
+                  message:
+                    type: string
+                    example: File deleted successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: File not found or access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/move-to-trash:
+    patch:
+      tags:
+        - Files
+      summary: Move file to trash
+      description: Soft delete - file will be permanently deleted after 24 hours
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+              properties:
+                fileId:
+                  type: string
+                  example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: File moved to trash
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      fileId:
+                        type: string
+                        example: 507f1f77bcf86cd799439011
+                      deleteAt:
+                        type: string
+                        format: date-time
+                        example: 2026-01-19T12:00:00.000Z
+                  message:
+                    type: string
+                    example: File moved to trash
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/remove-from-trash:
+    patch:
+      tags:
+        - Files
+      summary: Restore file from trash
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+              properties:
+                fileId:
+                  type: string
+                  example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: File restored successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      fileId:
+                        type: string
+                        example: 507f1f77bcf86cd799439011
+                  message:
+                    type: string
+                    example: File restored successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/download:
+    post:
+      tags:
+        - Files
+      summary: Get signed download URL for a file
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+              properties:
+                fileId:
+                  type: string
+                  example: 507f1f77bcf86cd799439011
+      responses:
+        200:
+          description: Download URL generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      downloadUrl:
+                        type: string
+                        example: https://cloudfront.example.com/signed-download-url
+                      fileName:
+                        type: string
+                        example: document.pdf
+                  message:
+                    type: string
+                    example: file download url got successfully
+                  success:
+                    type: boolean
+                    example: true
+        400:
+          description: File not found or access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /files/trash:
+    get:
+      tags:
+        - Files
+      summary: Get all files in trash
+      description: Returns trashed files grouped by deletion date with path information
+      security:
+        - cookieAuth: []
+      responses:
+        200:
+          description: Trash files retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      groupedByDate:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            date:
+                              type: string
+                              example: Sun Jan 18 2026
+                            files:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  _id:
+                                    type: string
+                                  name:
+                                    type: string
+                                  size:
+                                    type: integer
+                                  extension:
+                                    type: string
+                                  url:
+                                    type: string
+                                  parentDirId:
+                                    type: string
+                                    nullable: true
+                                  deletedAt:
+                                    type: string
+                                    format: date-time
+                                  createdAt:
+                                    type: string
+                                    format: date-time
+                                  updatedAt:
+                                    type: string
+                                    format: date-time
+                                  isUploading:
+                                    type: boolean
+                                  path:
+                                    type: string
+                                    example: /Documents/Work
+                                  pathSegments:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        _id:
+                                          type: string
+                                          nullable: true
+                                        name:
+                                          type: string
+                            count:
+                              type: integer
+                              example: 5
+                            totalSize:
+                              type: integer
+                              example: 10485760
+                      stats:
+                        type: object
+                        properties:
+                          totalFiles:
+                            type: integer
+                            example: 15
+                          totalSize:
+                            type: integer
+                            example: 31457280
+                  message:
+                    type: string
+                    example: Trash files retrieved successfully
+                  success:
+                    type: boolean
+                    example: true
+
+components:
+  schemas:
+    FileInfo:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: document.pdf
+        size:
+          type: integer
+          example: 2048576
+        extension:
+          type: string
+          example: .pdf
+        parentDirId:
+          type: string
+          nullable: true
+          example: 507f1f77bcf86cd799439012
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        url:
+          type: string
+          nullable: true
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    Error:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Error message
+        success:
+          type: boolean
+          example: false
+        errors:
+          type: array
+          items:
+            type: object
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sid
+      description: Session ID stored in HTTP-only cookie
