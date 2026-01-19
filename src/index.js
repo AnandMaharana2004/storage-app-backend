@@ -13,6 +13,7 @@ import directoryRouter from "./routes/directory.route.js";
 import fileRouter from "./routes/file.route.js";
 import cdnRouter from "./routes/cloudfront.route.js";
 import sharedRoute from "./routes/share.route.js";
+import setupSwagger from "./docs/index.js";
 
 const app = express();
 app.use(express.json());
@@ -24,6 +25,8 @@ app.use(
     credentials: true,
   }),
 );
+
+setupSwagger(app);
 
 app.get(
   "/health",
