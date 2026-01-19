@@ -28,6 +28,7 @@ import {
   DownloadUrlSchema,
 } from "../validators/fileSchema.js";
 import { cancelDelete, scheduleDelete } from "../service/trashService.js";
+import Share from "../models/shareModel.js";
 
 function getMimeType(extension) {
   const mimeTypes = {
@@ -657,4 +658,126 @@ export const GetAllTrashFiles = asyncHandler(async (req, res) => {
   res
     .status(200)
     .json(new ApiResponse(200, response, "Trash files retrieved successfully"));
+});
+
+export const GetAllPublicShareFiles = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  // Use aggregation to join Share and File collections
+  const publicShareFiles = await Share.aggregate([
+    {
+      $match: {
+        ownerId: userId,
+        resourceType: "file",
+        visibility: "public",
+        isActive: true,
+        $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
+      },
+    },
+    {
+      $lookup: {
+        from: "files",
+        localField: "resourceId",
+        foreignField: "_id",
+        as: "fileData",
+      },
+    },
+    {
+      $unwind: "$fileData",
+    },
+    {
+      $match: {
+        "fileData.deletedAt": { $exists: false },
+      },
+    },
+    {
+      $project: {
+        _id: "$fileData._id",
+        name: "$fileData.name",
+        size: "$fileData.size",
+        extension: "$fileData.extension",
+        url: "$fileData.url",
+        parentDirId: "$fileData.parentDirId",
+        shareId: "$shareId",
+        sharedAt: "$createdAt",
+      },
+    },
+    {
+      $sort: { sharedAt: -1 },
+    },
+  ]);
+
+  // Build paths for each file (similar to GetAllTrashFiles)
+  const filesWithPaths = await Promise.all(
+    publicShareFiles.map(async (file) => {
+      const pathSegments = [];
+      let currentDirId = file.parentDirId;
+
+      // Traverse up the directory tree
+      while (currentDirId) {
+        const dir = await Directory.findOne({
+          _id: currentDirId,
+          userId,
+        })
+          .select("name parentDirId")
+          .lean();
+
+        if (!dir) break;
+
+        pathSegments.unshift({
+          _id: dir._id,
+          name: dir.name,
+        });
+
+        currentDirId = dir.parentDirId;
+      }
+
+      // Build path string
+      const path =
+        pathSegments.length > 0
+          ? "/" + pathSegments.map((seg) => seg.name).join("/")
+          : "/";
+
+      // Generate public share URL with correct format
+      const publicUrl = `${envConfig.FRONTEND_URL}/shares/${file.shareId}`;
+
+      return {
+        _id: file._id,
+        name: file.name,
+        size: file.size,
+        extension: file.extension,
+        url: file.url,
+        parentDirId: file.parentDirId,
+        sharedAt: file.sharedAt,
+        publicUrl,
+        path,
+        pathSegments:
+          pathSegments.length > 0
+            ? pathSegments
+            : [{ _id: null, name: "Root" }],
+      };
+    }),
+  );
+
+  // Calculate total stats
+  const totalFiles = filesWithPaths.length;
+  const totalSize = filesWithPaths.reduce((sum, file) => sum + file.size, 0);
+
+  const response = {
+    files: filesWithPaths,
+    stats: {
+      totalFiles,
+      totalSize,
+    },
+  };
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        response,
+        "Public share files retrieved successfully",
+      ),
+    );
 });
