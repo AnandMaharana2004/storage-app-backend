@@ -29,6 +29,7 @@ import {
 } from "../validators/fileSchema.js";
 import { cancelDelete, scheduleDelete } from "../service/trashService.js";
 import Share from "../models/shareModel.js";
+import Fuse from "fuse.js";
 
 function getMimeType(extension) {
   const mimeTypes = {
@@ -85,6 +86,32 @@ async function updateDirectorySizes(directoryId) {
 
 function generateDownloadUrl(s3Key, expiresInMinutes = 60) {
   return generateSignedUrl(s3Key, expiresInMinutes);
+}
+
+async function buildBreadcrumbs(parentDirId, fileName, userId) {
+  const pathSegments = [];
+  let currentDirId = parentDirId;
+
+  while (currentDirId) {
+    const dir = await Directory.findOne({
+      _id: currentDirId,
+      userId,
+    })
+      .select("name parentDirId")
+      .lean();
+
+    if (!dir) break;
+
+    pathSegments.unshift(dir.name);
+    currentDirId = dir.parentDirId;
+  }
+
+  const basePath =
+    pathSegments.length > 0
+      ? "root/" + pathSegments.join("/")
+      : "root";
+
+  return fileName ? `${basePath}/${fileName}` : basePath;
 }
 
 export const RequestUploadUrl = asyncHandler(async (req, res) => {
@@ -780,4 +807,147 @@ export const GetAllPublicShareFiles = asyncHandler(async (req, res) => {
         "Public share files retrieved successfully",
       ),
     );
+});
+
+export const SearchItems = asyncHandler(async (req, res) => {
+  const { q, f } = req.query;
+
+  if (!q || q.trim() === "") {
+    throw new ApiError(400, "Search query is required");
+  }
+
+  const userId = req.user._id;
+  const searchQuery = q.trim();
+  const filterType = f?.toLowerCase(); // "file" | "folder" | undefined
+
+  if (filterType && !["file", "folder"].includes(filterType)) {
+    throw new ApiError(400, "Invalid filter type. Use 'file' or 'folder'");
+  }
+
+  const isAtlas = mongoose.connection.host.includes("mongodb.net");
+
+  let directories = [];
+  let files = [];
+
+  // =================================================
+  // 🔥 ATLAS SEARCH (PRODUCTION)
+  // =================================================
+  if (isAtlas) {
+    if (!filterType || filterType === "folder") {
+      directories = await Directory.aggregate([
+        {
+          $search: {
+            index: "default",
+            text: {
+              query: searchQuery,
+              path: "name",
+              fuzzy: { maxEdits: 2 },
+            },
+          },
+        },
+        { $match: { userId } },
+        { $project: { _id: 1, name: 1, parentDirId: 1 } },
+      ]);
+    }
+
+    if (!filterType || filterType === "file") {
+      files = await File.aggregate([
+        {
+          $search: {
+            index: "default",
+            text: {
+              query: searchQuery,
+              path: "name",
+              fuzzy: { maxEdits: 2 },
+            },
+          },
+        },
+        {
+          $match: {
+            userId,
+            deletedAt: { $exists: false },
+            isUploading: { $ne: true },
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            extension: 1,
+            url: 1,
+            thumbnail: 1,
+            parentDirId: 1,
+          },
+        },
+      ]);
+    }
+  }
+
+  // =================================================
+  // 🔥 LOCAL SEARCH (FUSE.JS)
+  // =================================================
+  else {
+    const fuseOptions = {
+      keys: ["name"],
+      threshold: 0.4,
+    };
+
+    if (!filterType || filterType === "folder") {
+      const rawDirectories = await Directory.find({ userId })
+        .select("_id name parentDirId")
+        .lean();
+
+      const dirFuse = new Fuse(rawDirectories, fuseOptions);
+      directories = dirFuse.search(searchQuery).map(r => r.item);
+    }
+
+    if (!filterType || filterType === "file") {
+      const rawFiles = await File.find({
+        userId,
+        deletedAt: { $exists: false },
+        isUploading: { $ne: true },
+      })
+        .select("_id name extension url thumbnail parentDirId")
+        .lean();
+
+      const fileFuse = new Fuse(rawFiles, fuseOptions);
+      files = fileFuse.search(searchQuery).map(r => r.item);
+    }
+  }
+
+  // =================================================
+  // 🔥 FORMAT RESPONSE
+  // =================================================
+
+  const directoryItems = directories.map((dir) => ({
+    itemType: "folder",
+    id: dir._id,
+    name: dir.name,
+    color: "red", // or your dynamic logic
+  }));
+
+  const fileItems = await Promise.all(
+    files.map(async (file) => {
+      const breadcrumbs = await buildBreadcrumbs(
+        file.parentDirId,
+        file.name,
+        userId
+      );
+
+      return {
+        itemType: "file",
+        type: getMimeType(file.extension),
+        thubnailImage: file.thumbnail || null,
+        id: file._id,
+        url: file.url,
+        breadcrumbs,
+      };
+    })
+  );
+
+  const items = [...directoryItems, ...fileItems];
+
+  return res.status(200).json(
+    new ApiResponse(200, { items }, "Search results retrieved successfully")
+  );
 });

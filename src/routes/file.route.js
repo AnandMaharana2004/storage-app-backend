@@ -14,6 +14,7 @@ import {
   DownloadUrl,
   GetAllTrashFiles,
   GetAllPublicShareFiles,
+  SearchItems,
 } from "../controller/fileController.js";
 import { authenticate } from "../middleware/authMiddleware.js";
 
@@ -28,6 +29,7 @@ router.post("/upload/request", RequestUploadUrl);
 router.post("/upload/complete", CompleteUpload);
 router.get("/trash", GetAllTrashFiles);
 router.get("/public", GetAllPublicShareFiles);
+router.get("/search", SearchItems)
 router.get("/:fileId", GetFile);
 router.get("/directory/:directoryId", GetFilesInDirectory);
 router.patch("/rename", RenameFile);
@@ -38,4 +40,7 @@ router.patch("/move-to-trash", MoveFileToTrash);
 router.patch("/remove-from-trash", RemoveFromTrash);
 router.post("/download", DownloadUrl);
 
+
 export default router;
+
+
